@@ -6,9 +6,9 @@ from bs4 import BeautifulSoup as soup
 from urllib.request import urlopen as uReq
 import numpy as np
 from easygui import *
-import wmi
 import re
 import collections
+import requests
 
 # gets passed an error for no Sequence in collections
 collections.Mapping = collections.abc.Mapping
@@ -18,115 +18,166 @@ collections.Sequence = collections.abc.Sequence
 # for windows you can use the following format as an example
 pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
 
-def selectCam():
-    cameras = []
-    c = wmi.WMI()
-    wql = "Select * From Win32_USBControllerDevice"
-    i = 0
-    for item in reversed(c.query(wql)):
-        p = item.Dependent.PNPClass
-        if p is not None and re.findall("Camera", p):
-            print(p)
-            cameras.append(str(item.Dependent.Name))
-            i = i + 1
-    print(cameras)
-    return cameras
 
+def list_all_mtg_sets(no_children=False):
+    """
+    Lists all the Magic the Gathering sets available on Scryfall.
 
-def populateSet(url, setMap):
-    uClient = uReq(url)
-    page_html = uClient.read()
-    uClient.close()
-    page_soup = soup(page_html, "html.parser")
-    cards_table = page_soup.findAll('tbody')
-
-    for cards in cards_table:
-        cardRows = cards.findAll('tr')
-        for card in cardRows[1:]:
-            cardInfo = card.findAll('td')
-            cardName = cardInfo[1].find_all('a', {})
-            if len(cardName) >= 1:
-                # name = cardInfo[1].text
-                name = cardName[0].text
-            badges = cardInfo[1].find_all('span', {'class', 'badge'})
-            if len(badges) >= 1:
-                for badge in badges:
-                    # print("Badges: ", badge.text)
-                    name = name + "(" + badge.text[0:1] + ")"
-            price = cardInfo[4].text
-            # print(name)
-            # print("Price: ", price)
-            setMap.add(name, price)
-
-    return setMap.getList()
-
-
-# Create your setMap class
-class key_value_Map(dict):
-    # __init__ function
-    def __init__(self):
-        self = dict()
-
-    # Function to add key:value
-    def add(self, key, value):
-        self[key] = value
-
-    def getList(dict):
-        return dict.keys()
-
-
-def populateSetList(setListMap):
-    set_url = "https://www.mtggoldfish.com/sets/"
-    uClient = uReq(set_url)
-    page_html = uClient.read()
-    uClient.close()
-    page_soup = soup(page_html, "html.parser")
-    result = page_soup.find_all('li', {'class', 'sets-set-information-name'})
-    for set_name in result:
-        if set_name.a:
-            setListMap[set_name.text] = set_name.a.get('href')
-    return setListMap
-
-
-def back(*args):
-    pass
-
-
-# #-----------------------------------------------------------------------------------------------------------------------
-
-# #The following Stuff Is Initalizing Adventures of the Forgotten Realms Trading Cards
-# #-----------------------------------------------------------------------------------------------------------------------
-# Pulling info from mtggoldfish
-# set_name = "Innistrad+Midnight+Hunt"
-# set_name = "Adventures+in+the+Forgotten+Realms"
-# my_url = "https://www.mtggoldfish.com/sets/"+set_name+"#paper"
-
-
-
-
-def getSetMap():
-    setMap = key_value_Map()
-    setListMap = key_value_Map()
-    setListMap = populateSetList(setListMap)
-    choices = setListMap.getList()
-    setChoice = choicebox("Selected any set from the list given below", "Magic the Gathering Sets", choices)
-    set_name = setListMap[setChoice]
-    my_url = "https://www.mtggoldfish.com" + set_name + "/Main+Set#paper"
-    cardBank = populateSet(my_url, setMap)
-    return setMap, cardBank
+    :param no_children: If True, only the parent sets are returned.
+    :return: A tuple containing two lists:
+        - set_names: List of set names.
+        - set_codes: List of set codes.
+    """
+    url = "https://api.scryfall.com/sets"
+    response = requests.get(url)
+    set_names = []
+    set_codes = []
+    if response.status_code == 200:
+        sets_data = response.json()
+        if no_children:
+            for set_info in sets_data['data']:
+                if 'parent_set_code' not in set_info:
+                    set_names.append(set_info['name'])
+                    set_codes.append(set_info['code'])
+        else:
+            set_names = [set_info['name'] for set_info in sets_data['data']]
+            set_codes = [set_info['code'] for set_info in sets_data['data']]
+        return set_names, set_codes
+    else:
+        print("Failed to fetch sets from Scryfall")
+        return []
     
+def get_cards_in_set(set_code):
+    """
+    Fetches all the cards in a given set from Scryfall.
+
+    :param set_code: The Magic the Gathering set code.
+    :return: A tuple containing two lists:
+        - card_name: List of card names.
+        - card_price: List of card prices in USD.
+    """
+    url = f"https://api.scryfall.com/cards/search?order=set&q=e%3A{set_code}&unique=prints"
+    response = requests.get(url)
     
-def newSet(setMap, setListMap, choices):
-    setChoice = choicebox("Selected any set from the list given below", "Magic the Gathering Sets", choices)
-    set_name = setListMap[setChoice]
-    # print("Set Chosen: ", setChoice, " With Url: ", set_name)
-    my_url = "https://www.mtggoldfish.com" + set_name + "#paper"
-    cardBank = populateSet(my_url, setMap)
+    if response.status_code == 200:
+        cards_data = response.json()
+        card_name = [card['name'] for card in cards_data['data']]
+        card_price = [card.get('prices', {}).get('usd') for card in cards_data['data']]
+        while cards_data['has_more']:
+            next_page_url = cards_data['next_page']
+            response = requests.get(next_page_url)
+            if response.status_code == 200:
+                cards_data = response.json()
+                card_name.extend([card['name'] for card in cards_data['data']])
+                card_price.extend([card.get('prices', {}).get('usd') for card in cards_data['data']])
+            else:
+                print("Failed to fetch additional cards from Scryfall")
+                break
+        
+        return card_name, card_price
+    else:
+        print("Failed to fetch cards from Scryfall")
+        return []
 
-def empty(a):
-    pass
+
+def getContours(img, imgContour, originalImg, imgConts, card_names, card_prices ,min_area=35000):
+    
+    contours, _ = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    width, height = 500, 700
+    price = ''
+    text = ''
+    for cnt in contours:
+        area = cv2.contourArea(cnt)
+        peri = cv2.arcLength(cnt, True)
+        approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
+        if area > min_area and len(approx) == 4:
+            cv2.drawContours(imgConts, cnt, -1, (255, 0, 255), 7)
+            rectX, rectY, rectW, rectH = cv2.boundingRect(approx)
+            cv2.rectangle(imgContour, (rectX, rectY), (rectX + rectW, rectY + rectH), (0, 255, 0), 5)
+            points = []
+            for point in approx:
+                x, y = point[0]
+                points.append([x, y])
+            card = np.float32(points)
+            x1, y1 = points[0]
+            x2, y2 = points[1]
+            x4, y4 = points[3]
+
+            if np.sqrt(np.square(x1 - x2) + np.square(y1 - y2)) < np.sqrt(np.square(x1 - x4) + np.square(y1 - y4)):
+                cardWarped = np.float32([[width, 0], [0, 0], [0, height], [width, height]])
+            else:
+                cardWarped = np.float32([[0, 0], [0, height], [width, height], [width, 0]])
+            matrix = cv2.getPerspectiveTransform(card, cardWarped)
+            imgOutput = cv2.warpPerspective(originalImg, matrix, (width, height))
+            
+            text, price = getPrediction(imgOutput, card_names, card_prices)
+
+            if text == "Not Found in Chosen Set":
+                textColor = (0, 0, 255)
+            else:
+                textColor = (255, 50, 0)
+            cv2.putText(imgContour, (text + " " + price), (rectX, rectY - 20), cv2.FONT_HERSHEY_COMPLEX, .7,
+                        textColor, 2)
+    return text, price
+            
 
 
+def getPrediction(img, card_names, card_prices):
+    '''
+    Returns the name of the card and its price. Performs OCR on the card title to get the card name.
+    
+    :param img: Image of the card.
+    :param card_names: List of card names.
+    :param card_prices: List of card prices.
+    :return: A tuple containing the card name and its price.
+        - closest_match: The closest match of the card name in the list of card names.
+        - price: The price of the card.
+    '''
+    card_title = img[25:75, 34:400]
+
+    card_name = re.sub('[^a-zA-Z0-9,+ ]', '', pytesseract.image_to_string(card_title))
+    
+    closest_match = difflib.get_close_matches(card_name, card_names)
+
+    if len(closest_match) >= 1:
+        closest_match = closest_match[0]
+        idx = card_names.index(closest_match)
+        price = re.sub('[^0-9$.]', '', card_prices[idx])
+    else:
+        closest_match = "Not Found in Chosen Set"
+        price = ""
+
+    return closest_match, price
+    
+def getCardName(img, card_names, card_prices, thresh1=100, thresh2=140):
+    '''
+    Returns the name of the card and its price.
+    
+    :param img: Image of the card.
+    :param card_names: List of card names.
+    :param card_prices: List of card prices.
+    :param thresh1: Threshold 1 for Canny Edge Detection.
+    :param thresh2: Threshold 2 for Canny Edge Detection.
+    :return: A tuple containing the card name and its price.
+        - cardName: The name of the card.
+        - imgContour: Image with contours drawn on it.
+    '''
+    imgContour = img.copy()
+    imgConts = img.copy()
+
+    imgBlur = cv2.GaussianBlur(img, (5, 5), 0)
+    imgGray = cv2.cvtColor(imgBlur, cv2.COLOR_BGR2GRAY)
+
+    imgCanny = cv2.Canny(imgGray, thresh1, thresh2)
+    kernel = np.ones((5, 5), np.uint8)
+    imgDil = cv2.dilate(imgCanny, kernel, iterations=1)
+
+    cardName, _ = getContours(imgDil, imgContour, img, imgConts, card_names, card_prices)
+
+    return cardName, imgContour
+
+#================================================================================================
+#================================================================================================
 
 def stackImages(scale, imgArray):
     rows = len(imgArray)
@@ -161,116 +212,23 @@ def stackImages(scale, imgArray):
     return ver
 
 
-def getContours(img, imgContour, originalImg, imgConts, setMap, cardBank, isExternal=False):
-    contours, hierarchy = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    width, height = 500, 700
-    price = ""
-    text = ''
-    for cnt in contours:
-        area = cv2.contourArea(cnt)
-        areaMin = 35000 if isExternal else cv2.getTrackbarPos("Area", "Parameters")
-        #areaMin = cv2.getTrackbarPos("Area", "Parameters")
-        peri = cv2.arcLength(cnt, True)
-        approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
-        # if area > areaMin and len(approx) == 4:
-        if area > areaMin and len(approx) == 4:
-            # print("Area: ",area)
-            cv2.drawContours(imgConts, cnt, -1, (255, 0, 255), 7)
-            rectX, rectY, rectW, rectH = cv2.boundingRect(approx)
-            cv2.rectangle(imgContour, (rectX, rectY), (rectX + rectW, rectY + rectH), (0, 255, 0), 5)
-            # cv2.putText(imgContour, "Points: " + str(len(approx)), (x+20, y+20), cv2.FONT_HERSHEY_COMPLEX, .7, (0,255,0), 2)
-            points = []
-            # i = 0
-            for point in approx:
-                x, y = point[0]
-                points.append([x, y])
-            card = np.float32(points)
-            x1, y1 = points[0]
-            x2, y2 = points[1]
-            x3, y3 = points[2]
-            x4, y4 = points[3]
 
-            # distance formula
-            # sqrt( (x2-x1)^2 + (y2-y1)^2 )
-            # This should make it so if it's cocked it still gets put into up, down regardless if it's cocked
-            # left or cocked right
-            if np.sqrt(np.square(x1 - x2) + np.square(y1 - y2)) < np.sqrt(np.square(x1 - x4) + np.square(y1 - y4)):
-                # top point goes to top right
-                cardWarped = np.float32([[width, 0], [0, 0], [0, height], [width, height]])
-            else:
-                # top point goes to top left
-                cardWarped = np.float32([[0, 0], [0, height], [width, height], [width, 0]])
-            matrix = cv2.getPerspectiveTransform(card, cardWarped)
-            imgOutput = cv2.warpPerspective(originalImg, matrix, (width, height))
-            
-            text, price = getPrediction(setMap, imgOutput, width, height, cardBank)
-            
-            if text == "Not Found in Chosen Set":
-                textColor = (0, 0, 255)
-            else:
-                textColor = (255, 50, 0)
-            cv2.putText(imgContour, (text + " " + price), (rectX, rectY - 20), cv2.FONT_HERSHEY_COMPLEX, .7,
-                        textColor, 2)
-    return text, price
-            
+def empty(a):
+    pass
 
-
-def getPrediction(setMap, img, width, height, cardBank):
-    card_title = img[25:75, 34:400]
-    # cv2.imshow("Card Name",card_title)
-
-    card_name = re.sub('[^a-zA-Z0-9,+ ]', '', pytesseract.image_to_string(card_title))
-
-    # print("Card name: ", card_name)
-
-    closest_match = difflib.get_close_matches(card_name, cardBank)
-    if len(closest_match) >= 1:
-        # print("Closest Matches",closest_match)
-        closest_match = closest_match[0]
-        price = re.sub('[^0-9$.]', '', setMap[closest_match])
-    else:
-        closest_match = "Not Found in Chosen Set"
-        price = ""
-
-    return closest_match, price
-
-def getCardName(img, setMap, cardBank, thresh1=100, thresh2=140):
-    imgContour = img.copy()
-    imgConts = img.copy()
-
-    imgBlur = cv2.GaussianBlur(img, (5, 5), 0)
-    imgGray = cv2.cvtColor(imgBlur, cv2.COLOR_BGR2GRAY)
-
-    imgCanny = cv2.Canny(imgGray, thresh1, thresh2)
-    kernel = np.ones((5, 5), np.uint8)
-    imgDil = cv2.dilate(imgCanny, kernel, iterations=1)
-
-    cardName, price = getContours(imgDil, imgContour, img, imgConts, setMap, cardBank, isExternal=True)
-
-    return cardName, imgContour
 
 def main():
-    setMap = key_value_Map()
-    setListMap = key_value_Map()
-    setListMap = populateSetList(setListMap)
-    choices = setListMap.getList()
+    set_names, set_codes = list_all_mtg_sets()
 
     # creating a multi choice box
-    camsAvail = selectCam()
-    print(len(camsAvail))
-    if len(camsAvail) > 1:
-        camChoice = choicebox("Selected which Camera will be viewing the cards", "Cameras in Device Manager", camsAvail)
-    else:
-        camChoice = camsAvail[0]
-    setChoice = choicebox("Selected any set from the list given below", "Magic the Gathering Sets", choices)
-    set_name = setListMap[setChoice]
-    my_url = "https://www.mtggoldfish.com" + set_name + "/Main+Set#paper"
-    cardBank = populateSet(my_url, setMap)
+    setChoice = choicebox("Selected any set from the list given below", "Magic the Gathering Sets", set_names)
+    idx = set_names.index(setChoice)
+    set_code = set_codes[idx]
+    cards, prices = get_cards_in_set(set_code)
 
     frameWidth = 1280
     frameHeight = 960
-    cap = cv2.VideoCapture(camsAvail.index(camChoice))
-    # cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
     cap.set(3, frameWidth)
     cap.set(4, frameHeight)
     
@@ -298,7 +256,7 @@ def main():
         kernel = np.ones((5, 5), np.uint8)
         imgDil = cv2.dilate(imgCanny, kernel, iterations=1)
 
-        getContours(imgDil, imgContour, img, imgConts, setMap, cardBank)
+        getContours(imgDil, imgContour, img, imgConts)
 
         imgStack = stackImages(0.8, ([img, imgGray, imgCanny],
                                     [imgConts, imgContour, img]))
