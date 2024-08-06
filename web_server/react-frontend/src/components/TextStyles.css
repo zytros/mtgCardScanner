@@ -1,0 +1,96 @@
+/* calculate the variables setting the postio in pixels on the screen */
+
+
+.paragraph{
+    font-size: 0.8em;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+    width: 100%;
+    align-items: center;
+    line-height: 20px;
+    margin-left: 10px;
+    margin-right: 20px;
+}
+
+.paragraph_html{
+    font-size: 0.8em;
+    margin-top: 0.5em;
+    margin-bottom: 0.4em;
+    width: 100;
+    align-items: center;
+    line-height: 20px;
+    margin-left: 10px;
+    margin-right: 20px;
+}
+
+.title-container {
+    text-align: center;
+    color: white; /* Ensuring the text is visible on darker backgrounds */
+    padding: 20px;
+    border-radius: 8px; /* Optional: adds rounded corners to the text container */
+}
+
+.title {
+    font-size: 2.7em; /* Large text for the title */
+    font-weight: bold;
+    margin-top: 1.5em;
+    margin-bottom: 0.8em;
+}
+
+.subtitle {
+    font-size: 0.9em; /* Smaller text for the subtitle */
+    font-weight: bold;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+    text-align: left;
+}
+
+.axis-label {
+    font-size: 1em; /* Size of the axis labels */
+    font-weight: bold;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+    text-anchor: middle;
+    color: #10277a;
+    fill: #10277a;
+}
+
+.chapter{
+    display: flex;
+    flex-direction: column;
+    margin-top: 2.5em;
+    margin-bottom: 0.5em;
+    justify-content: center;
+    width: 100vw;
+    white-space: pre-wrap;
+}
+.chapter > .chapter-title{
+    font-size: 30px;
+    font-weight: bold;
+    align-items:start;
+    width: 100%;
+    color: #3a0b97;
+    white-space: pre-wrap;
+}
+
+.chapter > .chapter-subtitle{
+    margin-top: 10px;
+    font-size: 25px ;
+    font-weight: bold;
+    align-items:start;
+    width: 100%;
+    white-space: pre-wrap;
+    color: #6c42c0;
+}
+
+.centered-infobox {
+    display: flex;
+    justify-content: center;
+}
+
+.user-guidance {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}

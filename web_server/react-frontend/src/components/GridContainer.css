@@ -1,0 +1,33 @@
+.text-container-left {
+    flex: 1;
+    margin-bottom: 1em;
+    display: inline-block;
+    font-size: 0.8em;
+    margin-bottom: 0.4em;
+    line-height: 20px;
+    padding-right: 30px;
+    padding-top:50px;
+}
+
+.content-container-right{
+    position: relative;
+    flex-direction: row;
+    display: inline-block;
+    flex: 1;
+    vertical-align: top;
+    box-shadow: 0.5px 0.5px 15px 1px #cacacaac;
+    margin: 20px 0px 0px 20px;
+}
+
+.two-containers {
+    width: 100vw;
+    margin-left: calc((100%/2 - 1000px/2));
+    display: grid;
+    grid-template-columns: 400px 600px; 
+    align-items: start;
+}
+
+.selected-image-highlight {
+    border: 2px solid #3a0b97; /* Example: a purple border */
+    box-shadow: 0 0 8px #3a0b97; /* Example: a subtle shadow for emphasis */
+}

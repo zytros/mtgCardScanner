@@ -7,8 +7,7 @@ API = "/api/v1/"  # optional string
 def add_routes(app):
     api = Api(app)
 
-    api.add_resource(res.scatter_data.DatasetResource, API + "data/<string:name>")
-    api.add_resource(res.app_info.Environment, API + "app_info")
-    # api.add_resource(res.app_info.Dragons, API + "dragons")
+    api.add_resource(res.text.ContentResource, API + "content")
+    api.add_resource(res.image.ImageResource, API + "img/<string:name>")
 
     return api

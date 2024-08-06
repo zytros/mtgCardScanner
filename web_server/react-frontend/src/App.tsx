@@ -1,31 +1,62 @@
 import { useEffect, useState } from 'react';
 import './App.css';
-import { DataArray } from './types/data';
-import DataChoiceComponent from './components/DataChoice';
-import ScatterPlot from './components/ScatterPlot';
-import { postPoints } from './router/resources/data';
+import { getContent,} from './router/resources/data';
+import TitleComponent from './components/Title';
+import ChapterComponent from './components/Chapter';
+import { Dictionary } from './types/content';
+import TableOfContents from './components/TableOfContents';
 
 function App() {
 
-  const [exampleData, setExampleData] = useState<DataArray>();
-  const [dataChoice, setDataChoice] = useState<string>();
+  const [title, setTitle] = useState<string>();
+  const [chapters, setChapters] = useState<Array<Dictionary>>();
+  const [isMobile, setIsMobile] = useState<boolean>(false);
 
   useEffect(() => {
-    dataChoice && postPoints(dataChoice).then(exampleData => {
-      setExampleData(exampleData);
-    });
-  }, [dataChoice]);
+    getContent().then(text_data => {
+      setTitle(text_data.title);
+      setChapters(text_data.chapters);
+    }
+  );
+  }, []);
 
-  function choiceMade(choice: string) {
-    setDataChoice(choice);
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    handleResize(); // Check the initial screen size
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  if (isMobile){ 
+    return(
+    <div style={{ textAlign: 'center', padding: '50px' }}>
+      <h1>Mobile Version Not Available</h1>
+      <p>Please visit this website on a desktop device.</p>
+    </div>
+    )
   }
-
   return (
     <div className="App">
-      <header className="App-header"> K-Means clustering
-      </header>
-      <DataChoiceComponent onChoiceMade={choiceMade} />
-      <ScatterPlot width={1100} height={550} data={exampleData} />
+      <TitleComponent title={title!}> </TitleComponent>
+      <div className='blog-body'>
+      {chapters && chapters.map((chapter) => {
+            if (chapter.chapter_title === 'Table of Contents') {
+              return <TableOfContents chapters={chapters}></TableOfContents>
+            }
+            else if (!chapter.paragraphs) {
+              return <h2 className="section-titles" id={chapter.chapter_title}>{chapter.chapter_title}</h2>
+            }
+            return <div id={chapter.chapter_title}>
+              <ChapterComponent key={chapter.chapter_title} subtitle={chapter.chapter_title} paragraphs={chapter.paragraphs}></ChapterComponent>
+              </div>
+          })}
+        </div>
     </div>
   )
 }

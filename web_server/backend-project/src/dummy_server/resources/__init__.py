@@ -1,7 +1,3 @@
-from . import scatter_data
-from . import app_info
+from . import text, image, occlusion_prediction_resource
 
-__all__ = [
-    "scatter_data",
-    "app_info"
-]
+__all__ = ["text", "image", "occlusion_prediction_resource"]

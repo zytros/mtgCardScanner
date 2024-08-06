@@ -1,0 +1,5 @@
+datasets
+transformers
+xplique
+
+#TODO: add everything from pip with version

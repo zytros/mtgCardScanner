@@ -1,0 +1,99 @@
+/* styles.css */
+.border {
+    background-color: rgba(255, 237, 217, 0.5);
+    box-shadow: 0.5px 0.5px 15px 1px #cacacaac;
+}
+
+.chapter h1 {
+    text-align: center; /* Ensure text inside the h1 is centered */
+    width: 100%; /* Optional: Ensure the h1 takes full width of the container */
+    margin: 0; /* Optional: Remove default margin */
+    font-size: 35px; /* Optional: Increase font size */
+    color: #3a0b97;
+}
+
+.table-of-contents {
+    margin-top: 40px;
+    display: flex;
+    flex-direction: row;
+    width: min(100%, 1200px);
+}
+
+.text-column {
+    width: 80%;
+}
+
+.section {
+    padding: 0px 0px 0px 50px;
+}
+
+.section h4 {
+    margin: 0;
+    padding: 5px;
+    transition: font-size 0.6s ease-in-out;
+    font-size: 1.2em;
+}
+
+/* .section h4:hover {
+    font-size: 1.5em;
+} */
+
+.table-of-contents ul {
+    list-style-type: none !important;
+    margin: 5px 0px 25px 0px;
+    padding: 0px 0px 0px 20px;
+}
+
+.table-of-contents li {
+    margin: 0;
+    padding: 0px 5px;
+    list-style-type: none !important;
+    transition: font-size 0.6s ease-in-out; 
+    font-size: 1.2em;
+}
+
+.table-of-contents li:hover {
+    font-size: 1.4em; 
+}
+
+.table-of-contents a {
+    font-weight: bold;
+    cursor: pointer;
+}
+
+html {
+    scroll-behavior: smooth;
+}  
+
+.gif-container {
+    margin: 40px;
+    width: 80%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+  
+.gif {
+    width: 100%;
+    max-height: 400px;
+    max-width: 600px;
+    box-shadow: 0.5px 0.5px 15px 1px #a9a9a9ac;
+    opacity: 0;
+    transition: opacity 0.4s ease-in-out;
+    /* object-fit: contain; */
+    overflow: hidden;
+}
+
+.fade-in {
+    opacity: 1;
+}
+
+.fade-out {
+    opacity: 0;
+}
+
+.default-image {
+    box-shadow: 0.5px 0.5px 15px 1px #a9a9a9ac;
+    width: min(100%, 400px);
+    transition: opacity 0.4s ease-in-out;
+}

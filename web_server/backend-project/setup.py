@@ -19,16 +19,17 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "start-server = dummy_server.router.app:start_server",
+            "start-mtg-server = dummy_server.router.app:start_server",
         ]
     },
     install_requires=[
         "Flask>=2.0.0",
-        "flask-restful>=0.3.9",
-        "flask-cors>=3.0.10",
-        "pandas>=1.4.1",
-        "scikit-learn>=1.0.2",
-        "psutil>=5.9.0"
+        "flask-restful>=0.3.9,<0.4",
+        "flask-cors>=3.0.10,<3.1",
+        "scikit-learn>=1.0.2,<1.1",
+        "transformers>=4.12.0,<5.0",
+        "pillow==10.0.1",
+        "numpy",
     ],
     packages=find_packages(where="src", include=["dummy_server*"]),
     package_dir={"": "src"},

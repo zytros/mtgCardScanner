@@ -1,0 +1,222 @@
+.image{
+    width: 1000px;
+    height: 100%;
+    object-fit: cover;
+    transition: all 0.3s ease;
+    box-shadow: 0.5px 0.5px 15px 1px #cacacaac;
+}
+.image_small_container{
+  padding-top: 20px;
+  padding-bottom: 20px;
+  display: flex;
+  justify-content: center; /* Horizontal centering */
+  align-items: center;
+}
+.image_small{
+  width: min(1200px, 40%);
+  height: 100%;
+  object-fit: cover;
+  transition: all 0.3s ease;
+  box-shadow: 0.5px 0.5px 15px 1px #cacacaac;
+   
+}
+/*
+:root {
+  --button: #3D0A91; 
+}
+
+.accordion-button {
+  background-color: var(--button);
+  color: white;
+}
+*/
+
+.banner {
+    background-image: url(../Banner_thin.png); /* Replace 'your-image-url.jpg' with your actual image URL */
+    background-size: cover;
+    width: 100vw;
+    height: 300px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.vit-architecture{
+    margin-top :30px;
+    box-shadow: 0.5px 0.5px 15px 1px #cacacaac;
+}
+
+.image-margin1{
+    margin-right: 20px;
+    width: 150px;
+    height: auto;
+}
+
+.image-margin2{
+    margin:0px;
+    width: 150px;
+    height: auto;
+}
+
+.image-gallery{
+    display: flex;
+    flex-direction: row;
+    place-content: center;
+    padding-bottom: 10px;
+    padding-top: 10px;
+    height: 100px;
+    cursor: pointer;
+    gap: 10px;
+}
+
+.image-gallery-no-padding{
+  display: flex;
+  flex-direction: row;
+  place-content: center;
+  cursor: pointer;
+  gap: 10px;
+}
+
+.image-gallery2{
+    display: flex;
+    flex-direction: column;
+    place-content: center;
+    cursor: pointer;
+    gap: 5px;
+}
+
+.image-gallery3{
+  display: flex;
+  flex-direction: row;
+  place-content: center;
+  cursor: pointer;
+  gap: 5px;
+}
+
+.gradient-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.image-selection{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 20px;
+    padding: 25px;
+}
+.image-selection2{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 25px;
+}
+
+.text-between-task{
+    padding-top: 50px;
+    padding-bottom: 50px;
+}
+
+.canvasBrush {
+  border: 2px solid #000;
+  margin-right: 20px;
+  cursor: url('../pencil.png') 0 31, auto;
+  width: 300px;
+  height: auto;
+}
+
+.button-9 {
+    appearance: button;
+    backface-visibility: hidden;
+    background-color: #405cf5;
+    border-radius: 6px;
+    border-width: 0;
+    box-shadow: rgba(50, 50, 93, .1) 0 0 0 1px inset,rgba(50, 50, 93, .1) 0 2px 5px 0,rgba(0, 0, 0, .07) 0 1px 1px 0;
+    box-sizing: border-box;
+    color: #fff;
+    cursor: pointer;
+    font-family: -apple-system,system-ui,"Segoe UI",Roboto,"Helvetica Neue",Ubuntu,sans-serif;
+    font-size: 0.9em;
+    height: 44px;
+    line-height: 1.15;
+    margin: 12px 0 0;
+    outline: none;
+    overflow: hidden;
+    padding: 0 25px;
+    position: relative;
+    text-align: center;
+    text-transform: none;
+    transform: translateZ(0);
+    transition: all .2s,box-shadow .08s ease-in;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    width: 100%;
+  }
+  
+  .button-9:disabled {
+    cursor: default;
+  }
+  
+  .button-9:focus {
+    box-shadow: rgba(50, 50, 93, .1) 0 0 0 1px inset, rgba(50, 50, 93, .2) 0 6px 15px 0, rgba(0, 0, 0, .1) 0 2px 2px 0, rgba(50, 151, 211, .3) 0 0 0 4px;
+  }
+
+  .button-4 {
+    appearance: none;
+    background-color: #FAFBFC;
+    border: 1px solid rgba(27, 31, 35, 0.15);
+    border-radius: 6px;
+    box-shadow: rgba(27, 31, 35, 0.04) 0 1px 0, rgba(255, 255, 255, 0.25) 0 1px 0 inset;
+    box-sizing: border-box;
+    color: #24292E;
+    cursor: pointer;
+    display: inline-block;
+    font-family: -apple-system, system-ui, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    list-style: none;
+    padding: 6px 16px;
+    position: relative;
+    transition: background-color 0.2s cubic-bezier(0.3, 0, 0.5, 1);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    vertical-align: middle;
+    white-space: nowrap;
+    word-wrap: break-word;
+  }
+  
+  .button-4:hover {
+    background-color: #F3F4F6;
+    text-decoration: none;
+    transition-duration: 0.1s;
+  }
+  
+  .button-4:disabled {
+    background-color: #FAFBFC;
+    border-color: rgba(27, 31, 35, 0.15);
+    color: #959DA5;
+    cursor: default;
+  }
+  
+  .button-4:active {
+    background-color: #EDEFF2;
+    box-shadow: rgba(225, 228, 232, 0.2) 0 1px 0 inset;
+    transition: none 0s;
+  }
+  
+  .button-4:focus {
+    outline: 1px transparent;
+  }
+  
+  .button-4:before {
+    display: none;
+  }
+  
+  .button-4:-webkit-details-marker {
+    display: none;
+  }

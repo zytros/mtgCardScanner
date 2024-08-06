@@ -1,0 +1,56 @@
+.drawing_blue{
+    color: #FFFFFF;
+    fill: #10277a;
+    stroke: #10277a; 
+}
+
+.drawing_purple{
+    color: #FFFFFF;
+    fill: #3a0b97;
+    stroke: #3a0b97;
+}
+.drawing_light_purple{
+    color: #FFFFFF;
+    fill: #af8df3;
+    stroke: #8558de;
+}
+.drawing_light_orange{
+    color: #FFFFFF;
+    fill: #facea0;
+    stroke: #facea0;
+}
+
+.drawing_green{
+    color: #FFFFFF;
+    fill: #34692e;
+    stroke: #34692e;
+}
+
+.drawing_red{
+    color: #FFFFFF;
+    fill: #6c1236;
+    stroke: #d11761;
+}
+
+.drawing_light_blue{
+    color: #FFFFFF;
+    fill: #2f6eba;
+    stroke: #2f6eba;
+}
+
+.vertical_texts{
+    writing-mode: vertical-lr;
+    font-weight: normal;
+    font-size: 0.9em;
+}
+
+.horizontal_texts{
+    font-size: 0.9em;
+}
+
+.horizontal-texts-large{
+    color: "#3a0b97";
+    fill: "#3a0b97";
+    font-weight: bold;
+    font-size: 1.2em;
+}

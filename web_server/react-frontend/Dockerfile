@@ -6,6 +6,9 @@ WORKDIR /srv
 
 RUN npm install
 RUN npm install -g serve
+RUN npm install jszip
+RUN npm install d3
+RUN npm install react-loader-spinner --save
 
 RUN npm run build
 

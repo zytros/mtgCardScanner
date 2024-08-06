@@ -131,3 +131,15 @@ dmypy.json
 
 # MISC
 .DS_Store
+
+#Luca
+start.bat
+investigating_swin/ViTVisAct_max/desktop/*
+*/start.bat
+investigating_swin/flashtorch_gradients/data/*
+
+#Anne
+investigating_swin/imagenet1k/data/*
+investigating_swin/lucent_investigation/AM_outputs/*
+investigating_swin/lucent_investigation/attention_output_maximization_results/*
+investigating_swin/lucent_investigation/full_layer_am_output/*
