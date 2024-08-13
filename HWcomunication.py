@@ -34,25 +34,36 @@ def swipe(num):
     call_arduino_function(3, num)
     
 def move_sledge(height):
-    HEIGHT += height
-    print(f'sledge moved to {HEIGHT} ')
+    print(f'sledge moved by {height} ')
     call_arduino_function(4, height)
+    
+def move_stepper(steps):
+    print(f'stepper moved {steps} steps')
+    call_arduino_function(5, steps)
+
+
 
 import serial
 import time
 
-def call_arduino_function(function_id, value):
-# Configure the serial port
-    ser = serial.Serial('COM3', 9600, timeout=1)  # Adjust 'COM3' to your serial port
-    time.sleep(2)  # Wait for the connection to be established
+def open_serial():
+    ser = serial.Serial('COM8', 9600, timeout=1)  
+    time.sleep(2)
+    print('Serial opened')
+    return ser
 
+def close_serial(ser):
+    ser.close()
+    print('Serial closed')
+
+def call_arduino_function(ser, function_id, value):
     # Send the function_id and value to the Arduino in the format "function_id,value"
     command = f"{function_id},{value}\n"
     ser.write(command.encode())
-
     # Read the response from the Arduino
-    response = ser.readline().decode().strip()
-    ser.close()
+    
+    response=ser.readline().decode().strip()
+    
 
     return int(response)
 

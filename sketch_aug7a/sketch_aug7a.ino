@@ -1,59 +1,154 @@
 #include <Arduino.h>
+#include <Servo.h>
+#include <Adafruit_MotorShield.h>
 
-int function1(int value) {
+Adafruit_MotorShield AFMS = Adafruit_MotorShield();
+
+Adafruit_StepperMotor *stepper1 = AFMS.getStepper(200, 1); // bin Disk
+Adafruit_StepperMotor *stepper2 = AFMS.getStepper(200, 2); // sledge
+
+Servo SERVO_1;
+Servo SERVO_2;
+int LEDS_pin = 12;
+int ENDSTOPPER_1 = 10; // upper
+int ENDSTOPPER_2 = 11; // bottom
+int OPT_ENDSTOP_1 = 0;
+int OPT_ENDSTOP_2 = 1;
+int OPT_ENDSTOP_3 = 2;
+int OPT_ENDSTOP_4 = 3;
+
+int currBin = 1;
+int currHeight = 0;
+
+void blockingServoWrite(Servo servo, int value){
+  servo.write(value);
+  while(servo.read() != value);
+}
+
+int optIsActive(int val){
+  if (val > 500) return 1;
+  else return 0;
+}
+
+int getActiveBin(){
+  int b0 = optIsActive(analogRead(OPT_ENDSTOP_1));
+  int b1 = optIsActive(analogRead(OPT_ENDSTOP_2));
+  int b2 = optIsActive(analogRead(OPT_ENDSTOP_3));
+  int b3 = optIsActive(analogRead(OPT_ENDSTOP_4));
+  int ret = b0 | (b1 << 1) | (b2 << 2) | (b3 << 3);
+  return ret;
+}
+
+int setLED(int value) {
   // LED to value
-  return value * 2;
+  digitalWrite(LEDS_pin, value);
+  return 0;
 }
 
-int function2(int value) {
+int setBin(int value) {
   // set bin to value
-  return value + 10;
+  if (value == 0) return 1;
+  if (currBin == value) return 0;
+  int mov_pos = (value - currBin) % 16;
+  int mov_neg = (value - currBin) % 16;
+  int mov = 0;
+  if (mov_pos <= mov_neg){
+    while(getActiveBin() != value){
+      stepper1->step(1, FORWARD, DOUBLE);
+    }
+  }else{
+    while(getActiveBin() != value){
+      stepper1->step(1, BACKWARD, DOUBLE);
+    }
+  }
+  currBin = value;
+  return 0;
 }
 
-int function3(int value) {
+int swipe(int value) {
   // swipe swiper value
-  return value - 5;
+  if(value == 0){
+    blockingServoWrite(SERVO_1, 90);
+    blockingServoWrite(SERVO_1, 0);
+    return 0;
+  }else if(value == 1){
+    blockingServoWrite(SERVO_2, 90);
+    blockingServoWrite(SERVO_2, 0);
+    return 0;
+  }
+  return 1;
 }
 
-int function4(int value) {
-  // move sledge 1/- amount
-  return value - 5;
+int moveSledge(int value) {
+  // move sledge +/- amount
+  // pos => up, neg => down
+  if (value >= 0){
+    for (int i = 0; i < value; i++){
+      if(digitalRead(ENDSTOPPER_1) == HIGH) {
+        stepper2->step(3, BACKWARD, DOUBLE);
+        break;
+      }
+        stepper2->step(1, FORWARD, DOUBLE);
+    }
+    return 0;
+  }else{
+    for (int i = 0; i < value; i++){
+      if(digitalRead(ENDSTOPPER_2) == HIGH) {
+        stepper2->step(3, FORWARD, DOUBLE);
+        break;
+      }
+        stepper2->step(1, BACKWARD, DOUBLE);
+    }
+    return 0;
+  }
 }
 
 void setup() {
-    Serial.begin(9600);
-    while (!Serial) {
-        ; // Wait for the serial port to connect. Needed for native USB
-    }
+  Serial.begin(9600);
+  while (!Serial);
+
+  if (!AFMS.begin()) {
+    Serial.println("Could not find Motor Shield. Check wiring.");
+    while (1);
+  }
+  Serial.println("Motor Shield found.");
+  stepper1->setSpeed(255);
+  stepper2->setSpeed(255);
+
+  SERVO_1.attach(8);
+  SERVO_2.attach(9);
+  pinMode(12, OUTPUT);
+  pinMode(10, INPUT);
+  pinMode(11, INPUT);
 }
 
 void loop() {
-    if (Serial.available() > 0) {
-        String command = Serial.readStringUntil('\n'); // Read the incoming command
-        int delimiterIndex = command.indexOf(',');
-        if (delimiterIndex != -1) {
-            int functionId = command.substring(0, delimiterIndex).toInt();
-            int value = command.substring(delimiterIndex + 1).toInt();
+  if (Serial.available() > 0) {
+    String command = Serial.readStringUntil('\n'); // Read the incoming command
+    int delimiterIndex = command.indexOf(',');
+    if (delimiterIndex != -1) {
+      int functionId = command.substring(0, delimiterIndex).toInt();
+      int value = command.substring(delimiterIndex + 1).toInt();
 
-            int result;
-            switch (functionId) {
-                case 1:
-                    result = function1(value);
-                    break;
-                case 2:
-                    result = function2(value);
-                    break;
-                case 3:
-                    result = function3(value);
-                    break;
-                case 4:
-                    result = function4(value);
-                    break;
-                default:
-                    result = -1; // Unknown function
-                    break;
-            }
-            Serial.println(result); // Send back the result
-        }
+      int result;
+      switch (functionId) {
+        case 1:
+          result = setLED(value);
+          break;
+        case 2:
+          result = setBin(value);
+          break;
+        case 3:
+          result = swipe(value);
+          break;
+        case 4:
+          result = moveSledge(value);
+          break;
+        default:
+          result = -1; // Unknown function
+          break;
+      }
+        Serial.println(result); // Send back the result
     }
+  }
 }
