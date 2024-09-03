@@ -4,11 +4,11 @@
 
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
 
-Adafruit_StepperMotor *stepper1 = AFMS.getStepper(200, 1); // bin Disk
-Adafruit_StepperMotor *stepper2 = AFMS.getStepper(200, 2); // sledge
+Adafruit_StepperMotor *stepper1 = AFMS.getStepper(200, 2); // bin Disk
+Adafruit_StepperMotor *stepper2 = AFMS.getStepper(200, 1); // sledge
 
-Servo SERVO_1;
-Servo SERVO_2;
+Servo SERVO_1; // pin 8
+Servo SERVO_2; // pin 9
 int LEDS_pin = 12;
 int ENDSTOPPER_1 = 10; // upper
 int ENDSTOPPER_2 = 11; // bottom
@@ -45,11 +45,24 @@ int setLED(int value) {
   return 0;
 }
 
-int setBin(int value) {
+int setBin(int value){
+  if currBin == value return 0;
+  int mov_pos = (value - currBin) % 16;
+  int mov_neg = (currBin - value) % 16;
+  if(mov_pos <= movneg){
+    stepper1->step(200*16, FORWARD, DOUBLE);
+  }else{
+    stepper1->step(200*16, BACKWARD, DOUBLE);
+  }
+  currBin = value;
+  return 0;
+}
+
+int setBin_old(int value) {
   // set bin to value
   if (value == 0) return 1;
   if (currBin == value) return 0;
-  int mov_pos = (value - currBin) % 16;
+  int mov_pos = (currBin - value) % 16;
   int mov_neg = (value - currBin) % 16;
   int mov = 0;
   if (mov_pos <= mov_neg){
@@ -68,12 +81,22 @@ int setBin(int value) {
 int swipe(int value) {
   // swipe swiper value
   if(value == 0){
-    blockingServoWrite(SERVO_1, 90);
-    blockingServoWrite(SERVO_1, 0);
+    for (int pos = 0; pos <= 120; pos += 10) { // goes from 0 degrees to 120 degrees
+      SERVO_1.write(pos);              // tell servo to go to position in variable 'pos'
+      delay(15);                       // waits 15ms for the servo to reach the position
+    }for (int pos = 120; pos >= 0; pos -= 10) { 
+      SERVO_1.write(pos);              // tell servo to go to position in variable 'pos'
+      delay(15);                       // waits 15ms for the servo to reach the position
+    }
     return 0;
   }else if(value == 1){
-    blockingServoWrite(SERVO_2, 90);
-    blockingServoWrite(SERVO_2, 0);
+    for (int pos = 0; pos <= 120; pos += 10) { // goes from 0 degrees to 120 degrees
+      SERVO_2.write(pos);              // tell servo to go to position in variable 'pos'
+      delay(15);                       // waits 15ms for the servo to reach the position
+    }for (int pos = 120; pos >= 0; pos -= 10) { 
+      SERVO_2.write(pos);              // tell servo to go to position in variable 'pos'
+      delay(15);                       // waits 15ms for the servo to reach the position
+    }
     return 0;
   }
   return 1;
