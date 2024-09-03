@@ -44,6 +44,7 @@ def loop_iteration():
     # get bin number
     bin_nr = sort_function(name)
     # set bin number
+    # TODO: add logic to determine binNr
     set_bin(bin_nr)
     # swipe
     swipe(1)

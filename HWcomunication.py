@@ -46,9 +46,10 @@ def move_stepper(steps):
 import serial
 import time
 
-def open_serial():
-    ser = serial.Serial('COM8', 9600, timeout=1)  
-    time.sleep(2)
+def open_serial(com):
+    ser = serial.Serial(com, 9600, timeout=1)  
+    time.sleep(4)
+    ser.read_all()
     print('Serial opened')
     return ser
 
@@ -56,13 +57,16 @@ def close_serial(ser):
     ser.close()
     print('Serial closed')
 
-def call_arduino_function(ser, function_id, value):
+def call_arduino_function(ser:serial.Serial, function_id, value):
     # Send the function_id and value to the Arduino in the format "function_id,value"
     command = f"{function_id},{value}\n"
     ser.write(command.encode())
     # Read the response from the Arduino
+    response=ser.read_all().decode().strip()
+    while response == '':
+        response=ser.read_all().decode().strip()
+        time.sleep(0.1)
     
-    response=ser.readline().decode().strip()
     
 
     return int(response)

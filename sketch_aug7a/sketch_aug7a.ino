@@ -46,15 +46,11 @@ int setLED(int value) {
 }
 
 int setBin(int value){
-  if currBin == value return 0;
-  int mov_pos = (value - currBin) % 16;
-  int mov_neg = (currBin - value) % 16;
-  if(mov_pos <= movneg){
-    stepper1->step(200*16, FORWARD, DOUBLE);
+  if(value < 0){
+    stepper1->step(-value, BACKWARD, DOUBLE);
   }else{
-    stepper1->step(200*16, BACKWARD, DOUBLE);
+    stepper1->step(value, FORWARD, DOUBLE);
   }
-  currBin = value;
   return 0;
 }
 
@@ -102,7 +98,16 @@ int swipe(int value) {
   return 1;
 }
 
-int moveSledge(int value) {
+int moveSledge(int value){
+  if(value < 0){
+    stepper2->step(-value, BACKWARD, DOUBLE);
+  }else{
+    stepper2->step(value, FORWARD, DOUBLE);
+  }
+  return 0;
+}
+
+int moveSledge_old(int value) {
   // move sledge +/- amount
   // pos => up, neg => down
   if (value >= 0){
