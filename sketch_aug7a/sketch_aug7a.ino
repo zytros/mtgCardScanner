@@ -17,8 +17,12 @@ int OPT_ENDSTOP_2 = 1;
 int OPT_ENDSTOP_3 = 2;
 int OPT_ENDSTOP_4 = 3;
 
-int currBin = 1;
+int currBin = 0;
 int currHeight = 0;
+
+inline int positive_modulo(int i, int n) {
+    return (i % n + n) % n;
+}
 
 void blockingServoWrite(Servo servo, int value){
   servo.write(value);
@@ -46,11 +50,17 @@ int setLED(int value) {
 }
 
 int setBin(int value){
-  if(value < 0){
-    stepper1->step(-value, BACKWARD, DOUBLE);
+  if (currBin == value) return 0;
+  int mov_pos = positive_modulo((value - currBin), 16);
+  int mov_neg = positive_modulo((currBin - value), 16);
+  if (mov_neg < 0 || mov_pos < 0) return -1; // assert
+  int mov = 0;
+  if (mov_pos <= mov_neg){
+    stepper1->step(mov_pos*200, FORWARD, DOUBLE);
   }else{
-    stepper1->step(value, FORWARD, DOUBLE);
+    stepper1->step(mov_neg*200, BACKWARD, DOUBLE);
   }
+  currBin = value;
   return 0;
 }
 
@@ -58,8 +68,8 @@ int setBin_old(int value) {
   // set bin to value
   if (value == 0) return 1;
   if (currBin == value) return 0;
-  int mov_pos = (currBin - value) % 16;
-  int mov_neg = (value - currBin) % 16;
+  int mov_pos = (value - currBin) % 16;
+  int mov_neg = (currBin - value) % 16;
   int mov = 0;
   if (mov_pos <= mov_neg){
     while(getActiveBin() != value){
