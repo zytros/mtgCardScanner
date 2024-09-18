@@ -3,7 +3,7 @@ from tkinter import ttk
 from PIL import Image, ImageTk
 from util import get_bin_nr_cmc, get_bin_nr_color, get_bin_nr_type, get_bin_nr_list, get_picture, get_db_add_card_command, crop_image
 from MTGCardDetection import getCardName, get_cards_in_set
-from HWcomunication import set_bin, swipe, move_sledge, open_serial, close_serial, set_led
+from HWcomunication import HWCommunication
 import sqlite3
 import time
 import threading
@@ -11,7 +11,10 @@ import threading
 db = sqlite3.connect('cards.db')
 db_cursor = db.cursor()
 
-ser = open_serial()
+
+com = 'COM4'
+
+arduino = HWCommunication(com)
 
 cards = []
 prices = []
@@ -19,23 +22,25 @@ prices = []
 sort_function = get_bin_nr_cmc
 sort_function_name = 'cmc'
 
+curr_bin = 0
+
 set_code = 'stx'
 running = False
 def loop_iteration():
     # perform for left, right
     # get image
     image = get_picture()
-    image1 = crop_image(image, 0, 0, 800, 600)
-    image2 = crop_image(image, 800, 0, 800, 600)
+    image1 = crop_image(image, (0, 0, 800, 600))
+    image2 = crop_image(image, (800, 0, 800, 600))
     # get card name
     name, image_new = getCardName(image1, card_names=cards, card_prices=prices)
     # TODO: set card image
     # get bin number
     bin_nr = sort_function(name)
     # set bin number
-    set_bin(bin_nr)
+    arduino.set_bin(bin_nr)
     # swipe
-    swipe(0)
+    arduino.swipe(0)
     # add to db
     db_cursor.execute(get_db_add_card_command(name, set_code))
     # get card name
@@ -45,15 +50,14 @@ def loop_iteration():
     bin_nr = sort_function(name)
     # set bin number
     # TODO: add logic to determine binNr
-    set_bin(bin_nr)
+    arduino.set_bin(bin_nr)
     # swipe
-    swipe(1)
+    arduino.swipe(1)
     # add to db
     db_cursor.execute(get_db_add_card_command(name, set_code))
     # adjust card height
-    move_sledge(1)
-    
-    pass
+    arduino.move_sledge(1)
+    print('loop iteration')
 
 def start():
     global running
@@ -121,10 +125,10 @@ cmd_start.pack(side=tk.LEFT, padx=5)
 cmd_stop = tk.Button(frame, text="Stop", command=lambda: stop())
 cmd_stop.pack(side=tk.LEFT, padx=5)
 
-cmd_card_loader_down = tk.Button(frame, text="Card Loader Down", command=lambda: move_sledge(-1000))
+cmd_card_loader_down = tk.Button(frame, text="Card Loader Down", command=lambda: arduino.move_sledge(-1000))
 cmd_card_loader_down.pack(side=tk.LEFT, padx=5)
 
-cmd_card_loader_up = tk.Button(frame, text="Card Loader Up", command=lambda: move_sledge(1000))
+cmd_card_loader_up = tk.Button(frame, text="Card Loader Up", command=lambda: arduino.move_sledge(1000))
 cmd_card_loader_up.pack(side=tk.LEFT, padx=5)
 
 # Create a button to open a new window
@@ -144,5 +148,5 @@ image_label.image = img_tk
 # Run the application
 root.mainloop()
 
-close_serial(ser)
+#close_serial(ser)
 db.commit()
