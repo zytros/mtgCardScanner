@@ -188,5 +188,7 @@ void loop() {
       }
         Serial.println(result); // Send back the result
     }
+    stepper1->release();
+    stepper2->release();
   }
 }
