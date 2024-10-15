@@ -23,7 +23,8 @@ def get_picture(save_path=None, side=0):
             image_array = np.frombuffer(response.content, dtype=np.uint8)
             # Decode the image array to an OpenCV image
             image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
-            img_cropped = image[480:1150, 220:1400] #TODO: correct values, include side
+            #img_cropped = image[480:1150, 220:1400] #TODO: correct values, include side
+            img_cropped = image
             return img_cropped
     else:
         print("Failed to capture image")
@@ -230,6 +231,12 @@ def get_bin_nr_list(cardname):
 def get_db_add_card_command(cardname, set_code):
     return f"INSERT INTO cards (name, set_name) VALUES ('{cardname}', '{set_code}');"
 
+def add_card_to_db(cardname, set_code, db_cursor):
+    if not (cardname == 'Not Found in Chosen Set' or cardname == ''):
+        db_cursor.execute(get_db_add_card_command(cardname, set_code))
+    else:
+        print('Card not added to database')
+        
 def crop_image(image, dims):
     """
     Crops an image to the specified rectangle.

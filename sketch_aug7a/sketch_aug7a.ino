@@ -158,6 +158,14 @@ void setup() {
   pinMode(12, OUTPUT);
   pinMode(10, INPUT);
   pinMode(11, INPUT);
+
+  for (int pos = 0; pos <= 120; pos += 10) { // goes from 0 degrees to 120 degrees
+      SERVO_1.write(pos);              // tell servo to go to position in variable 'pos'
+      delay(50);                       // waits 50ms for the servo to reach the position
+    }for (int pos = 120; pos >= 0; pos -= 10) { 
+      SERVO_1.write(pos);              // tell servo to go to position in variable 'pos'
+      delay(50);                       // waits 50ms for the servo to reach the position
+    }
 }
 
 void loop() {

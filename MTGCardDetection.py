@@ -90,10 +90,13 @@ def getContours(img, imgContour, originalImg, imgConts, card_names, card_prices 
         area = cv2.contourArea(cnt)
         peri = cv2.arcLength(cnt, True)
         approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
-        if area > min_area and len(approx) == 4:
+        if area > min_area and len(approx) >= 4:
+            #print(area, len(approx))
             cv2.drawContours(imgConts, cnt, -1, (255, 0, 255), 7)
             rectX, rectY, rectW, rectH = cv2.boundingRect(approx)
             cv2.rectangle(imgContour, (rectX, rectY), (rectX + rectW, rectY + rectH), (0, 255, 0), 5)
+            if len(approx) > 4:
+                continue
             points = []
             for point in approx:
                 x, y = point[0]
@@ -122,7 +125,7 @@ def getContours(img, imgContour, originalImg, imgConts, card_names, card_prices 
             
 
 
-def getPrediction(img, card_names, card_prices):
+def getPrediction(img, card_names, card_prices, card_title_pos=(40, 90, 34, 400)):
     '''
     Returns the name of the card and its price. Performs OCR on the card title to get the card name.
     
@@ -133,10 +136,11 @@ def getPrediction(img, card_names, card_prices):
         - closest_match: The closest match of the card name in the list of card names.
         - price: The price of the card.
     '''
-    card_title = img[25:75, 34:400]
+    #card_title = img[25:75, 34:400]
+    card_title = img[card_title_pos[0]:card_title_pos[1], card_title_pos[2]:card_title_pos[3]]
 
     card_name = re.sub('[^a-zA-Z0-9,+ ]', '', pytesseract.image_to_string(card_title))
-    
+    print(card_name)
     closest_match = difflib.get_close_matches(card_name, card_names)
 
     if len(closest_match) >= 1:
@@ -162,6 +166,9 @@ def getCardName(img, card_names, card_prices, thresh1=100, thresh2=140):
         - cardName: The name of the card.
         - imgContour: Image with contours drawn on it.
     '''
+    mask = cv2.imread('white_mask.png')
+    #mask = np.hstack([mask, mask, mask])
+    img = img * mask
     imgContour = img.copy()
     imgConts = img.copy()
 
@@ -189,7 +196,7 @@ def stackImages(scale, imgArray):
         for x in range(0, rows):
             for y in range(0, cols):
                 if imgArray[x][y].shape[:2] == imgArray[0][0].shape[:2]:
-                    imgArray[x][y] = cv2.resize(imgArray[x][y], (0, 0), None, scale, scale)
+                    imgArray[x][y] = cv2.resize(imgArray[x][y], (800, 600), None, scale, scale)
                 else:
                     imgArray[x][y] = cv2.resize(imgArray[x][y], (imgArray[0][0].shape[1], imgArray[0][0].shape[0]),
                                                 None, scale, scale)
@@ -243,7 +250,8 @@ def main():
 
     
     while True:
-        success, img = cap.read()
+        #success, img = cap.read()
+        img = cv2.imread('test2.png')#[350:790,620:1000]
         imgContour = img.copy()
         imgConts = img.copy()
 
@@ -252,17 +260,19 @@ def main():
 
         threshold1 = cv2.getTrackbarPos("Threshold1", "Parameters")
         threshold2 = cv2.getTrackbarPos("Threshold2", "Parameters")
+        minArea = cv2.getTrackbarPos("Area", "Parameters")
         imgCanny = cv2.Canny(imgGray, threshold1, threshold2)
         kernel = np.ones((5, 5), np.uint8)
         imgDil = cv2.dilate(imgCanny, kernel, iterations=1)
 
-        getContours(imgDil, imgContour, img, imgConts)
+        _,_,corr_img = getContours(imgDil, imgContour, img, imgConts, cards, prices, min_area=minArea)
 
         imgStack = stackImages(0.8, ([img, imgGray, imgCanny],
-                                    [imgConts, imgContour, img]))
-        cv2.imshow("MTG Price Lookup OpenCV Project", imgContour)
+                                    [imgConts, imgContour, corr_img]))
+        #cv2.imshow("MTG Price Lookup OpenCV Project", imgContour)
         # If you'd like to see how the sliders are changing how the system views the card, uncomment next line
-        # cv2.imshow('Full Explanation', imgStack)
+        cv2.imshow('Full Explanation', imgStack)
+        
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
         

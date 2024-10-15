@@ -8,7 +8,7 @@ class HWCommunication:
         self.LED = False
         self.BIN = 0
         self.HEIGHT = 0
-        self.ser = self.open_serial(com)
+        self.ser = self.open_serial()
         
     def led_toggle(self):
         self.led_on() if not self.LED else self.led_off()
@@ -36,45 +36,46 @@ class HWCommunication:
     def set_bin(self, value):
         amount = self.calc_move_amount(self.BIN, value)
         print(f'bin set from {self.BIN} to {value}')
-        self.call_arduino_function(self.ser, 2, amount)
+        #shortcut
+        self.call_arduino_function(2, value)
         self.BIN = value
         
     def swipe(self, num):
         print(f'swiped {num}')
-        self.call_arduino_function(self.ser, 3, num)
+        self.call_arduino_function(3, num)
         
     def move_sledge(self, height):
         print(f'sledge moved by {height} ')
-        self.call_arduino_function(self.ser, 4, height)
+        self.call_arduino_function(4, height)
         
     def move_stepper(self, steps):
         print(f'stepper moved {steps} steps')
-        self.call_arduino_function(self.ser, 5, steps)
+        self.call_arduino_function(5, steps)
 
-    def calc_move_amount(curr, target):
+    def calc_move_amount(self, curr, target):
         mov_pos = (target - curr) % 16
         mov_neg = (curr - target) % 16
         return mov_pos if mov_pos < mov_neg else -mov_neg
     
-    def open_serial(self, com):
-        ser = serial.Serial(com, 9600, timeout=1)  
+    def open_serial(self):
+        ser = serial.Serial(self.com, 9600, timeout=1)  
         time.sleep(4)
         ser.read_all()
         print('Serial opened')
         return ser
 
-    def close_serial(self, ser):
-        ser.close()
+    def close_serial(self):
+        self.ser.close()
         print('Serial closed')
 
-    def call_arduino_function(ser:serial.Serial, function_id, value):
+    def call_arduino_function(self, function_id, value):
         # Send the function_id and value to the Arduino in the format "function_id,value"
         command = f"{function_id},{value}\n"
-        ser.write(command.encode())
+        self.ser.write(command.encode())
         # Read the response from the Arduino
-        response=ser.read_all().decode().strip()
+        response=self.ser.read_all().decode().strip()
         while response == '':
-            response=ser.read_all().decode().strip()
+            response=self.ser.read_all().decode().strip()
             time.sleep(0.1)
     
         return int(response)
