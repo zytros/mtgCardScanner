@@ -4,11 +4,20 @@ import pytesseract
 import difflib
 from bs4 import BeautifulSoup as soup
 from urllib.request import urlopen as uReq
+from pathlib import Path
 import numpy as np
 from easygui import *
 import re
 import collections
 import requests
+
+SCRYFALL_HEADERS = {
+    # Scryfall requires a non-default User-Agent that identifies your app.
+    "User-Agent": "mtg-card-scanner/1.0 (contact: local-dev)",
+    "Accept": "application/json",
+}
+
+REQUEST_TIMEOUT_SECONDS = 15
 
 # gets passed an error for no Sequence in collections
 collections.Mapping = collections.abc.Mapping
@@ -16,7 +25,7 @@ collections.Sequence = collections.abc.Sequence
 
 # directory of py tesseract, installed in accordance with the readme
 # for windows you can use the following format as an example
-pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
+pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
 
 
 def list_all_mtg_sets(no_children=False):
@@ -29,7 +38,11 @@ def list_all_mtg_sets(no_children=False):
         - set_codes: List of set codes.
     """
     url = "https://api.scryfall.com/sets"
-    response = requests.get(url)
+    try:
+        response = requests.get(url, headers=SCRYFALL_HEADERS, timeout=REQUEST_TIMEOUT_SECONDS)
+    except requests.RequestException as exc:
+        print(f"Failed to fetch sets from Scryfall: {exc}")
+        return [], []
     set_names = []
     set_codes = []
     if response.status_code == 200:
@@ -44,8 +57,8 @@ def list_all_mtg_sets(no_children=False):
             set_codes = [set_info['code'] for set_info in sets_data['data']]
         return set_names, set_codes
     else:
-        print("Failed to fetch sets from Scryfall")
-        return []
+        print(f"Failed to fetch sets from Scryfall: {response.status_code} - {response.text}")
+        return [], []
     
 def get_cards_in_set(set_code):
     """
@@ -57,7 +70,11 @@ def get_cards_in_set(set_code):
         - card_price: List of card prices in USD.
     """
     url = f"https://api.scryfall.com/cards/search?order=set&q=e%3A{set_code}&unique=prints"
-    response = requests.get(url)
+    try:
+        response = requests.get(url, headers=SCRYFALL_HEADERS, timeout=REQUEST_TIMEOUT_SECONDS)
+    except requests.RequestException as exc:
+        print(f"Failed to fetch cards from Scryfall: {exc}")
+        return [], []
     
     if response.status_code == 200:
         cards_data = response.json()
@@ -65,7 +82,7 @@ def get_cards_in_set(set_code):
         card_price = [card.get('prices', {}).get('usd') for card in cards_data['data']]
         while cards_data['has_more']:
             next_page_url = cards_data['next_page']
-            response = requests.get(next_page_url)
+            response = requests.get(next_page_url, headers=SCRYFALL_HEADERS, timeout=REQUEST_TIMEOUT_SECONDS)
             if response.status_code == 200:
                 cards_data = response.json()
                 card_name.extend([card['name'] for card in cards_data['data']])
@@ -76,8 +93,8 @@ def get_cards_in_set(set_code):
         
         return card_name, card_price
     else:
-        print("Failed to fetch cards from Scryfall")
-        return []
+        print(f"Failed to fetch cards from Scryfall: {response.status_code} - {response.text}")
+        return [], []
 
 
 def getContours(img, imgContour, originalImg, imgConts, card_names, card_prices ,min_area=35000):
@@ -121,7 +138,7 @@ def getContours(img, imgContour, originalImg, imgConts, card_names, card_prices 
                 textColor = (255, 50, 0)
             cv2.putText(imgContour, (text + " " + price), (rectX, rectY - 20), cv2.FONT_HERSHEY_COMPLEX, .7,
                         textColor, 2)
-    return text, price
+    return text, price, imgContour
             
 
 
@@ -168,7 +185,7 @@ def getCardName(img, card_names, card_prices, thresh1=100, thresh2=140):
     '''
     mask = cv2.imread('white_mask.png')
     #mask = np.hstack([mask, mask, mask])
-    img = img * mask
+    #img = img * mask
     imgContour = img.copy()
     imgConts = img.copy()
 
@@ -179,9 +196,9 @@ def getCardName(img, card_names, card_prices, thresh1=100, thresh2=140):
     kernel = np.ones((5, 5), np.uint8)
     imgDil = cv2.dilate(imgCanny, kernel, iterations=1)
 
-    cardName, _ = getContours(imgDil, imgContour, img, imgConts, card_names, card_prices)
+    cardName, cardPrice, _ = getContours(imgDil, imgContour, img, imgConts, card_names, card_prices)
 
-    return cardName, imgContour
+    return cardName, imgContour, cardPrice
 
 #================================================================================================
 #================================================================================================
@@ -224,6 +241,29 @@ def empty(a):
     pass
 
 
+def open_video_capture(preferred_indices=None):
+    if preferred_indices is None:
+        preferred_indices = list(range(6))
+
+    available_devices = sorted(str(path) for path in Path("/dev").glob("video*"))
+    if available_devices:
+        print(f"Detected video devices: {', '.join(available_devices)}")
+    else:
+        print("No /dev/video* devices detected by the OS")
+
+    for index in preferred_indices:
+        cap = cv2.VideoCapture(index)
+        if cap.isOpened():
+            print(f"Opened video capture device at index {index}")
+            return cap
+        cap.release()
+
+    raise IOError(
+        "Cannot open any video capture device. "
+        "Check that the capture-card driver is installed and that the card exposes a /dev/video* node."
+    )
+
+
 def main():
     set_names, set_codes = list_all_mtg_sets()
 
@@ -235,7 +275,7 @@ def main():
 
     frameWidth = 1280
     frameHeight = 960
-    cap = cv2.VideoCapture(0)
+    cap = open_video_capture()
     cap.set(3, frameWidth)
     cap.set(4, frameHeight)
     
@@ -245,13 +285,11 @@ def main():
     cv2.createTrackbar("Threshold2", "Parameters", 140, 255, empty)
     cv2.createTrackbar("Area", "Parameters", 35000, 100000, empty)
 
-    if not cap.isOpened():
-        raise IOError("Cannot open webcam")
-
-    
     while True:
-        #success, img = cap.read()
-        img = cv2.imread('test2.png')#[350:790,620:1000]
+        success, img = cap.read()
+        if not success or img is None:
+            raise IOError("Failed to read frame from the video capture device")
+        #img = cv2.imread('test2.png')#[350:790,620:1000]
         imgContour = img.copy()
         imgConts = img.copy()
 

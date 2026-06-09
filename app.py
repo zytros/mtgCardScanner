@@ -2,20 +2,21 @@ import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
 from util import get_bin_nr_cmc, get_bin_nr_color, get_bin_nr_type, get_bin_nr_list, get_picture, get_db_add_card_command, crop_image, add_card_to_db
-from MTGCardDetection import getCardName, get_cards_in_set
+from MTGCardDetection import getCardName, get_cards_in_set, list_all_mtg_sets
 from HWcomunication import HWCommunication
 import sqlite3
 import time
 import threading
 import cv2
-
+from easygui import *
 db = sqlite3.connect('cards.db', check_same_thread=False)
 db_cursor = db.cursor()
 
 
 com = 'COM8'
 
-arduino = HWCommunication(com)
+arduino = None
+#arduino = HWCommunication(com)
 
 cards = []
 prices = []
@@ -28,11 +29,12 @@ curr_bin = 0
 set_code = 'stx'
 running = False
 
-arduino.swipe(0)
+#arduino.swipe(0)
 
 def loop_iteration():
     # perform for left, right
     # get image
+    # get card
     image = get_picture()
     image1 = crop_image(image, (0, 0, 800, 600))
     image2 = crop_image(image, (800, 0, 800, 600))
@@ -128,6 +130,15 @@ def set_new_photo():
     img = get_picture()
     set_image_label(img, image_label)
 
+set_names, set_codes = list_all_mtg_sets()
+
+# creating a multi choice box
+setChoice = choicebox("Selected any set from the list given below", "Magic the Gathering Sets", set_names)
+idx = set_names.index(setChoice)
+set_code = set_codes[idx]
+print(f"User selected set code: {set_code}")
+cards, prices = get_cards_in_set(set_code)
+print(f"Fetched {len(cards)} cards for set code {set_code}")
 root = tk.Tk()
 root.title("MTG Card Sorter")
 
@@ -136,7 +147,7 @@ frame = tk.Frame(root)
 frame.pack(pady=10)
 
 text_box = tk.Entry(frame)
-text_box.insert(0, "Set Code")  
+text_box.insert(0, set_code)  
 text_box.pack(side=tk.LEFT, padx=5)
 
 

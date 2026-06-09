@@ -1,4 +1,6 @@
 import requests
+import socket
+import time
 import cv2
 import numpy as np
 from MTGCardDetection import getCardName, get_cards_in_set
@@ -11,7 +13,10 @@ for i in range(15):
     card_lists_fns.append(f'card_list_{i}.txt')
 
 def get_picture(save_path=None, side=0):
-    url = "http://192.168.178.51/capture"  # Replace <ESP32_CAM_IP> with the actual IP address of your ESP32-CAM
+    
+    return cv2.imread("capture.png")
+    
+    url = "http://192.168.178.53/capture"  # Replace <ESP32_CAM_IP> with the actual IP address of your ESP32-CAM
     response = requests.get(url)
     
     if response.status_code == 200:
@@ -255,3 +260,46 @@ def crop_image(image, dims):
     cropped_image = image[y:y+height, x:x+width]
 
     return cropped_image
+
+ESP32_IP = "192.168.178.53" # Replace with your IP
+PORT = 80
+FILENAME = "captured_image.jpg"
+
+def capture_image():
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.settimeout(15) # Long timeout for the initial capture
+    
+    try:
+        print(f"Connecting to {ESP32_IP}...")
+        client_socket.connect((ESP32_IP, PORT))
+        
+        # Give the ESP32 a moment to snap the photo and start sending
+        time.sleep(0.5) 
+        
+        image_data = bytearray()
+        print("Receiving data...")
+        
+        while True:
+            # We use a 4KB buffer for each chunk
+            chunk = client_socket.recv(4096)
+            if not chunk:
+                break
+            image_data.extend(chunk)
+            
+        if len(image_data) > 0:
+            with open(FILENAME, "wb") as f:
+                f.write(image_data)
+            print(f"Success! Saved {len(image_data)} bytes to {FILENAME}")
+            
+            # Basic JPEG check: JPEGs start with 0xFF 0xD8 and end with 0xFF 0xD9
+            if image_data.startswith(b'\xff\xd8'):
+                print("Confirmed: Data starts with JPEG header.")
+            else:
+                print("Warning: Data received does not look like a JPEG.")
+        else:
+            print("Received 0 bytes. The ESP32 closed the connection too early.")
+            
+    except Exception as e:
+        print(f"Error: {e}")
+    finally:
+        client_socket.close()
