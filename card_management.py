@@ -79,31 +79,33 @@ class SortingCriteria:
         if num_bins < 2:
             raise ValueError("not enough bins")
         self.num_bins = num_bins
-        
+
         if self.sorting_criteria == "cmc":
-            self.sort = self._cmc_sort
+            self._sort_fn = self._cmc_sort
         elif self.sorting_criteria == "color":
-            self.sort = self._color_sort
-        
-        
-    def sort(self, card):
-        raise NotImplementedError
-    
+            self._sort_fn = self._color_sort
+        else:
+            self._sort_fn = self._cmc_sort
+
+    def get_bin_for_card(self, card):
+        return self._sort_fn(card)
+
     def _cmc_sort(self, card):
         bin = -1
         print("cmc_sort")
         return bin
-    
+
     def _color_sort(self, card):
         bin = -1
         print("color_sort")
         return bin
-    
+
+
 class CardSorterSoftware:
-    def __init__(self, data_folder, img_folder, robot, set_code = None):
-        self.data_folder : str = data_folder
-        self.img_folder : str = img_folder
-        self.robot : CardSorterRobot = robot
+    def __init__(self, data_folder, img_folder, robot, set_code=None):
+        self.data_folder: str = data_folder
+        self.img_folder: str = img_folder
+        self.robot: CardSorterRobot = robot
         if set_code:
             self.set_code = set_code
         else:
@@ -111,27 +113,61 @@ class CardSorterSoftware:
             setChoice = choicebox("Selected any set from the list given below", "Magic the Gathering Sets", set_names)
             idx = set_names.index(setChoice)
             self.set_code = set_codes[idx]
-        self.card_names, self.card_prices = get_cards_in_set(self.set_code)
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        self.fn = f"{data_folder}/cards_{timestamp}_{self.set_code}.csv"
+        self.fn = "-1"
+        self._load_cards_for_set(self.set_code)
         self.card_data_list = []
         self.card_nr = 0
+        self.last_entry = None
+        self.last_processed_frame = None
         
-    def sort_loop(self):
-        self.robot.arduino.get_next_card()
-        img = self.robot.camera.get_picture()
-        name, img_new, price = getCardName(img, self.card_names, self.card_prices)
+
+    def _load_cards_for_set(self, set_code):
+        self.card_names, self.card_prices = get_cards_in_set(set_code)
+        if self.fn == "-1":
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            self.fn = f"{self.data_folder}/cards_{timestamp}_{set_code}.csv"
+
+    def reload_set_data(self, set_code):
+        self.set_code = set_code
+        self._load_cards_for_set(self.set_code)
+        #self.card_data_list = []
+        #self.card_nr = 0
+        #self.last_entry = None
+        #self.last_processed_frame = None
+        print(f"changed set code to {set_code} with a total of {len(self.card_names)} cards.")
+
+    def get_live_frame(self):
+        if self.robot is None or self.robot.camera is None:
+            return None
+        frame = self.robot.camera.get_picture()
+        return frame
+
+    def capture_and_detect(self, image=None):
+        if image is None:
+            image = self.get_live_frame()
+
+        if image is None:
+            return None, None
+
+        name, img_new, price = getCardName(image, self.card_names, self.card_prices)
         if name == "Not Found in Chosen Set" or name == "":
             bin_nr = 0
         else:
-            bin_nr = self.robot.sorting_criteria.sort(name)
+            bin_nr = self.robot.sorting_criteria.get_bin_for_card(name)
+
         entry = {'card_name': name, 'card_price': price, 'bin': bin_nr, 'card_nr': self.card_nr}
         self.card_nr += 1
         self.card_data_list.append(entry)
+        #self.robot.arduino.move_to_bin(bin_nr)
+        self.last_processed_frame = img_new if img_new is not None else image
+        return self.last_processed_frame, bin_nr
+
+    def sort_loop(self):
+        self.robot.arduino.get_next_card()
+        last_frame, bin_nr = self.capture_and_detect()
         self.robot.arduino.move_to_bin(bin_nr)
-        return entry, img_new
-        
-        
+        return last_frame
+
     def write_data_to_disk(self):
         if not os.path.exists(self.fn):
             df = pd.DataFrame(self.card_data_list)

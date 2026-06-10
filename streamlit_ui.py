@@ -18,12 +18,12 @@ def to_rgb(image):
     return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
 
-def init_sorter():
+def init_sorter(set_code="khm"):
     camera = WebCam(0)
     arduino = Arduino(11500, 5)
     criteria = SortingCriteria("cmc", 5)
     robot = CardSorterRobot(5, criteria, arduino, camera)
-    return CardSorterSoftware("data", "", robot)
+    return CardSorterSoftware("data", "", robot, set_code)
 
 
 st.set_page_config(page_title="MTG Card Scanner", layout="wide")
@@ -65,53 +65,71 @@ st.markdown(
 st.title("MTG Card Scanner")
 
 if "running" not in st.session_state:
-    st.session_state.running = True
+    st.session_state.running = False
 if "css" not in st.session_state:
     st.session_state.css = init_sorter()
 if "last_entry" not in st.session_state:
     st.session_state.last_entry = None
 if "last_img" not in st.session_state:
     st.session_state.last_img = None
+if "live_img" not in st.session_state:
+    st.session_state.live_img = None
 
-# Right-side menu bar for future controls.
 st.sidebar.title("Menu")
-set_code = st.sidebar.text_input("Set Code", value="sos")
+current_set_code = st.session_state.css.set_code if st.session_state.css is not None else "khm"
+set_code = st.sidebar.text_input("Set Code", value=current_set_code)
 if st.sidebar.button("Apply Set Code"):
-    st.session_state.css = init_sorter(set_code)
+    st.session_state.css.reload_set_data(set_code)
     st.session_state.last_entry = None
     st.session_state.last_img = None
+    st.session_state.live_img = None
 
 st.sidebar.subheader("Future Controls")
 st.sidebar.write("- Sorting mode")
 st.sidebar.write("- Bin routing")
 st.sidebar.write("- DB filters")
 
-start_col, stop_col, save_col = st.columns(3)
+start_col, status_col, stop_col, capture_col, save_col = st.columns(5)
 if start_col.button("Start"):
     st.session_state.running = True
 if stop_col.button("Stop"):
     st.session_state.running = False
+if capture_col.button("Capture & Detect"):
+    img_new, _ = st.session_state.css.capture_and_detect()
+    st.session_state.last_img = img_new
 if save_col.button("Save CSV"):
     st.session_state.css.write_data_to_disk()
 
-q_key = st.text_input("Press q + Enter to stop/close scanner", value="")
-if q_key.lower().strip() == "q":
-    st.session_state.running = False
+status_color = "#28a745" if st.session_state.running else "#dc3545"
+status_text = "running" if st.session_state.running else "stopped"
+status_col.markdown(
+    f"<div style='color:{status_color}; font-weight:bold; text-align:center; padding-top:0.45rem;'>{status_text}</div>",
+    unsafe_allow_html=True,
+)
+
+live_frame = st.session_state.css.get_live_frame() if st.session_state.css is not None else None
+if live_frame is not None:
+    st.session_state.live_img = live_frame
+
+left_col, right_col = st.columns(2)
+with left_col:
+    st.subheader("Live Camera")
+    if st.session_state.live_img is not None:
+        st.image(to_rgb(st.session_state.live_img), caption="Live Camera")
+    else:
+        st.info("Waiting for camera feed...")
+
+with right_col:
+    st.subheader("Latest Detected Card")
+    if st.session_state.last_img is not None:
+        st.image(to_rgb(st.session_state.last_img), caption="Last Detected Card")
+    else:
+        st.info("No detected card yet")
 
 if st.session_state.running:
-    entry, img_new = st.session_state.css.sort_loop()
-    st.session_state.last_entry = entry
+    img_new = st.session_state.css.sort_loop()
     st.session_state.last_img = img_new
 
-if st.session_state.last_img is not None:
-    st.image(to_rgb(st.session_state.last_img), caption="Detected Card (img_new)")
-else:
-    st.info("Waiting for first scanned card image...")
-
-if st.session_state.last_entry is not None:
-    st.write("Latest scan:")
-    st.json(st.session_state.last_entry)
-
-if st.session_state.running:
-    time.sleep(0.2)
+if True:
+    time.sleep(0.03)
     st.rerun()

@@ -142,7 +142,7 @@ def getContours(img, imgContour, originalImg, imgConts, card_names, card_prices 
             
 
 
-def getPrediction(img, card_names, card_prices, card_title_pos=(40, 90, 34, 400)):
+def getPrediction(img, card_names, card_prices, card_title_pos_1=(20, 70, 34, 400), card_title_pos_2=(-20, -70, -34, -400)):
     '''
     Returns the name of the card and its price. Performs OCR on the card title to get the card name.
     
@@ -154,14 +154,46 @@ def getPrediction(img, card_names, card_prices, card_title_pos=(40, 90, 34, 400)
         - price: The price of the card.
     '''
     #card_title = img[25:75, 34:400]
-    card_title = img[card_title_pos[0]:card_title_pos[1], card_title_pos[2]:card_title_pos[3]]
+    card_title_1 = img[card_title_pos_1[0]:card_title_pos_1[1], card_title_pos_1[2]:card_title_pos_1[3]]
+    rotated_img = cv2.rotate(img, cv2.ROTATE_180)
+    card_title_2 = rotated_img[card_title_pos_1[0]:card_title_pos_1[1], card_title_pos_1[2]:card_title_pos_1[3]]
+    
+    cv2.imwrite("images/title_1.jpg", card_title_1)
+    cv2.imwrite("images/title_2.jpg", card_title_2)
+    
+    str_1 = pytesseract.image_to_string(card_title_1)
+    str_2 = pytesseract.image_to_string(card_title_2)
+    card_name_1 = re.sub('[^a-zA-Z0-9,+ ]', '', str_1)
+    card_name_2 = re.sub('[^a-zA-Z0-9,+ ]', '', str_2)
+    print(f"raw reading 1: {card_name_1}")
+    print(f"raw reading 2: {card_name_2}")
+    
+    closest_match_1 = difflib.get_close_matches(card_name_1, card_names, n=1)
+    closest_match_2 = difflib.get_close_matches(card_name_2, card_names, n=1)
 
-    card_name = re.sub('[^a-zA-Z0-9,+ ]', '', pytesseract.image_to_string(card_title))
-    print(card_name)
-    closest_match = difflib.get_close_matches(card_name, card_names)
+    # Initialize variables for the best match tracking
+    closest_match = "Not Found in Chosen Set"
+    best_score = 0.0
 
-    if len(closest_match) >= 1:
-        closest_match = closest_match[0]
+    # Evaluate the first orientation match
+    if closest_match_1:
+        match_1 = closest_match_1[0]
+        # Calculate a similarity score between 0.0 and 1.0
+        score_1 = difflib.SequenceMatcher(None, card_name_1, match_1).ratio()
+        if score_1 > best_score:
+            best_score = score_1
+            closest_match = match_1
+
+    # Evaluate the second orientation (upside down) match
+    if closest_match_2:
+        match_2 = closest_match_2[0]
+        score_2 = difflib.SequenceMatcher(None, card_name_2, match_2).ratio()
+        if score_2 > best_score:
+            best_score = score_2
+            closest_match = match_2
+
+    # Set a minimum confidence threshold (e.g., 0.3) so gibberish doesn't accidentally match
+    if best_score >= 0.3 and closest_match != "Not Found in Chosen Set":
         idx = card_names.index(closest_match)
         price = re.sub('[^0-9$.]', '', card_prices[idx])
     else:
