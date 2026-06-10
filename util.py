@@ -45,9 +45,17 @@ def get_card_details(cardname):
     Returns:
         dict: A dictionary containing the card's details, or None if the card is not found.
     """
+    headers = {
+        "User-Agent": "mtg-card-scanner/1.0 (contact: local-dev)",
+        "Accept": "application/json",
+    }
     url = f"https://api.scryfall.com/cards/named?exact={cardname}"
-    response = requests.get(url)
-    
+    try:
+        response = requests.get(url, headers=headers, timeout=15)
+    except requests.RequestException as exc:
+        print(f"Error fetching card details from Scryfall: {exc}")
+        return None
+
     if response.status_code == 200:
         return response.json()
     else:
@@ -65,6 +73,14 @@ def get_colors(cardname):
     details = get_card_details(cardname)
     if details:
         return details["colors"]
+    else:
+        return None
+    
+def get_price(cardname):
+    details = get_card_details(cardname)
+    if details:
+        prices = details["prices"]
+        return prices["eur"]
     else:
         return None
 

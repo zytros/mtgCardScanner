@@ -215,7 +215,7 @@ def getCardName(img, card_names, card_prices, thresh1=100, thresh2=140):
         - cardName: The name of the card.
         - imgContour: Image with contours drawn on it.
     '''
-    mask = cv2.imread('white_mask.png')
+    #mask = cv2.imread('white_mask.png')
     #mask = np.hstack([mask, mask, mask])
     #img = img * mask
     imgContour = img.copy()

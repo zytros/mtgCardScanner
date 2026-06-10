@@ -13,6 +13,13 @@ from MTGCardDetection import list_all_mtg_sets, get_cards_in_set, getCardName
 from datetime import datetime
 import pandas as pd
 import os
+import glob
+import time
+
+try:
+    import serial
+except ImportError:  # pragma: no cover - import is environment-dependent
+    serial = None
 
 
 class Camera:
@@ -36,18 +43,71 @@ class WebCam(Camera):
         
 
 class Arduino:
-    def __init__(self, baud, num_bins):
+    def __init__(self, baud, num_bins, port=None):
         self.baud = baud
         self.num_bins = num_bins
-        
+        self.port = port or self._detect_port()
+        self._serial = None
+        self._connect()
+
+    def _detect_port(self):
+        candidates = []
+        for pattern in ("/dev/ttyACM*", "/dev/ttyUSB*", "/dev/tty.usbmodem*", "/dev/tty.usbserial*"):
+            candidates.extend(glob.glob(pattern))
+        candidates.extend(["COM3", "COM4", "COM5"])
+        return candidates[0] if candidates else None
+
+    def _connect(self):
+        if serial is None:
+            raise ImportError("pyserial is required to talk to the Arduino. Install it with 'pip install pyserial'.")
+
+        if self.port is None:
+            raise ConnectionError("No Arduino serial port detected. Connect the board and set the port explicitly.")
+
+        self._serial = serial.Serial(self.port, self.baud, timeout=1)
+        self._serial.reset_input_buffer()
+        self._serial.reset_output_buffer()
+        print(f"Connected to Arduino on port {self.port} on baud {self.baud}")
+
+    def _send_command(self, command, expected_reply, timeout=15.0):
+        if self._serial is None or not self._serial.is_open:
+            self._connect()
+
+        print(f"sending command {command}")
+        self._serial.reset_input_buffer()
+        self._serial.write((command + "\n").encode("utf-8"))
+        self._serial.flush()
+
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if self._serial.in_waiting > 0:
+                line = self._serial.readline().decode("utf-8", errors="ignore").strip()
+                if line:
+                    if expected_reply is None or line == expected_reply:
+                        return line
+            time.sleep(0.01)
+
+        raise TimeoutError(f"Timed out waiting for reply '{expected_reply}' from Arduino")
+
     def get_next_card(self):
-        # blocking
-        return -1
-    
+        try:
+            self._send_command("get_card", "GET_CARD_DONE", timeout=15.0)
+            return 0
+        except Exception as exc:
+            print(f"could not trigger card acquisition: {exc}")
+            return -1
+
     def move_to_bin(self, bin):
-        # blocking
-        print("moved card to bin")
-        return bin
+        try:
+            self._send_command(f"move_bin {bin}", "MOVE_BIN_DONE", timeout=5.0)
+            return bin
+        except Exception as exc:
+            print(f"could not move card to bin: {exc}")
+            return -1
+
+    def __del__(self):
+        if getattr(self, "_serial", None) is not None and self._serial.is_open:
+            self._serial.close()
 
 class CardSorterRobot:
     def __init__(self, num_bins, sorting_criteria, arduino, camera):
@@ -73,34 +133,6 @@ class CardSorterRobot:
         if succ == -1:
             print("couldn't move card to bin")
         
-class SortingCriteria:
-    def __init__(self, sorting_criteria, num_bins):
-        self.sorting_criteria = sorting_criteria
-        if num_bins < 2:
-            raise ValueError("not enough bins")
-        self.num_bins = num_bins
-
-        if self.sorting_criteria == "cmc":
-            self._sort_fn = self._cmc_sort
-        elif self.sorting_criteria == "color":
-            self._sort_fn = self._color_sort
-        else:
-            self._sort_fn = self._cmc_sort
-
-    def get_bin_for_card(self, card):
-        return self._sort_fn(card)
-
-    def _cmc_sort(self, card):
-        bin = -1
-        print("cmc_sort")
-        return bin
-
-    def _color_sort(self, card):
-        bin = -1
-        print("color_sort")
-        return bin
-
-
 class CardSorterSoftware:
     def __init__(self, data_folder, img_folder, robot, set_code=None):
         self.data_folder: str = data_folder
@@ -130,10 +162,6 @@ class CardSorterSoftware:
     def reload_set_data(self, set_code):
         self.set_code = set_code
         self._load_cards_for_set(self.set_code)
-        #self.card_data_list = []
-        #self.card_nr = 0
-        #self.last_entry = None
-        #self.last_processed_frame = None
         print(f"changed set code to {set_code} with a total of {len(self.card_names)} cards.")
 
     def get_live_frame(self):

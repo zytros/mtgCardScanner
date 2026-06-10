@@ -20,7 +20,7 @@ def to_rgb(image):
 
 def init_sorter(set_code="khm"):
     camera = WebCam(0)
-    arduino = Arduino(11500, 5)
+    arduino = Arduino(9600, 5)
     criteria = SortingCriteria("cmc", 5)
     robot = CardSorterRobot(5, criteria, arduino, camera)
     return CardSorterSoftware("data", "", robot, set_code)
@@ -89,7 +89,7 @@ st.sidebar.write("- Sorting mode")
 st.sidebar.write("- Bin routing")
 st.sidebar.write("- DB filters")
 
-start_col, status_col, stop_col, capture_col, save_col = st.columns(5)
+start_col, status_col, stop_col, capture_col, save_col, fetch_col = st.columns(6)
 if start_col.button("Start"):
     st.session_state.running = True
 if stop_col.button("Stop"):
@@ -99,6 +99,9 @@ if capture_col.button("Capture & Detect"):
     st.session_state.last_img = img_new
 if save_col.button("Save CSV"):
     st.session_state.css.write_data_to_disk()
+if fetch_col.button("Get Next Card"):
+    st.session_state.css.robot.arduino.get_next_card()
+    st.session_state.last_entry = None
 
 status_color = "#28a745" if st.session_state.running else "#dc3545"
 status_text = "running" if st.session_state.running else "stopped"
