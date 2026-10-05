@@ -15,6 +15,7 @@ import pandas as pd
 import os
 import glob
 import time
+from sorting import SortingCriteria, CMCSort, ColorSort, PriceSort
 
 try:
     import serial
@@ -181,7 +182,7 @@ class CardSorterSoftware:
         if name == "Not Found in Chosen Set" or name == "":
             bin_nr = 0
         else:
-            bin_nr = self.robot.sorting_criteria.get_bin_for_card(name)
+            bin_nr = self.robot.sorting_criteria.sort(name)
 
         entry = {'card_name': name, 'card_price': price, 'bin': bin_nr, 'card_nr': self.card_nr}
         self.card_nr += 1
@@ -210,7 +211,7 @@ class CardSorterSoftware:
 if __name__ == "__main__":
     camera = WebCam(0)
     arduino = Arduino(11500, 5)
-    criteria = SortingCriteria("cmc", 5)
+    criteria = SortingCriteria(7)
     card_sorting_robot = CardSorterRobot(5, criteria, arduino, camera)
     css = CardSorterSoftware("data", "", card_sorting_robot, "sos")
     css.sort_loop()

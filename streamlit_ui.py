@@ -1,5 +1,4 @@
 import time
-
 import cv2
 import streamlit as st
 
@@ -7,7 +6,9 @@ from card_management import (
     Arduino,
     CardSorterRobot,
     CardSorterSoftware,
-    SortingCriteria,
+    CMCSort,
+    ColorSort,
+    PriceSort,
     WebCam,
 )
 
@@ -18,12 +19,28 @@ def to_rgb(image):
     return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
 
-def init_sorter(set_code="khm"):
-    camera = WebCam(0)
+def init_sorter(set_code="neo", criteria_name="cmc", cam_index=0):
+    camera = WebCam(cam_index)
     arduino = Arduino(9600, 5)
-    criteria = SortingCriteria("cmc", 5)
+    criteria = create_sorting_criteria(criteria_name)
     robot = CardSorterRobot(5, criteria, arduino, camera)
     return CardSorterSoftware("data", "", robot, set_code)
+
+
+def create_sorting_criteria(criteria_name):
+    criteria_map = {
+        "price": PriceSort(7),
+        "cmc": CMCSort(7),
+        "color": ColorSort(7),
+    }
+    return criteria_map[criteria_name]
+
+
+def set_sorting_criteria(criteria_name):
+    if st.session_state.css is None:
+        return
+    st.session_state.css.robot.sorting_criteria = create_sorting_criteria(criteria_name)
+    st.session_state.sorting_criteria = criteria_name
 
 
 st.set_page_config(page_title="MTG Card Scanner", layout="wide")
@@ -68,12 +85,16 @@ if "running" not in st.session_state:
     st.session_state.running = False
 if "css" not in st.session_state:
     st.session_state.css = init_sorter()
+if "sorting_criteria" not in st.session_state:
+    st.session_state.sorting_criteria = "cmc"
 if "last_entry" not in st.session_state:
     st.session_state.last_entry = None
 if "last_img" not in st.session_state:
     st.session_state.last_img = None
 if "live_img" not in st.session_state:
     st.session_state.live_img = None
+if "pending_action" not in st.session_state:
+    st.session_state.pending_action = None
 
 st.sidebar.title("Menu")
 current_set_code = st.session_state.css.set_code if st.session_state.css is not None else "khm"
@@ -84,8 +105,25 @@ if st.sidebar.button("Apply Set Code"):
     st.session_state.last_img = None
     st.session_state.live_img = None
 
+st.sidebar.subheader("Sorting Criteria")
+st.sidebar.caption("Active: " + st.session_state.sorting_criteria.capitalize())
+if st.sidebar.button("Price"):
+    set_sorting_criteria("price")
+if st.sidebar.button("CMC"):
+    set_sorting_criteria("cmc")
+if st.sidebar.button("Color"):
+    set_sorting_criteria("color")
+
+st.sidebar.subheader("Camera Settings")
+cam_index = st.sidebar.number_input("Camera Index", min_value=0, max_value=5, value=0, step=1)
+if st.sidebar.button("Reconnect Camera"):
+    st.session_state.css.robot.camera = WebCam(cam_index)
+    st.session_state.live_img = None
+    st.success(f"Connected to camera {cam_index}")
+
+auto_refresh = st.sidebar.checkbox("Live Preview Auto-Refresh", value=True)
+
 st.sidebar.subheader("Future Controls")
-st.sidebar.write("- Sorting mode")
 st.sidebar.write("- Bin routing")
 st.sidebar.write("- DB filters")
 
@@ -100,8 +138,9 @@ if capture_col.button("Capture & Detect"):
 if save_col.button("Save CSV"):
     st.session_state.css.write_data_to_disk()
 if fetch_col.button("Get Next Card"):
-    st.session_state.css.robot.arduino.get_next_card()
+    st.session_state.pending_action = "get_next_card"
     st.session_state.last_entry = None
+    st.rerun()
 
 status_color = "#28a745" if st.session_state.running else "#dc3545"
 status_text = "running" if st.session_state.running else "stopped"
@@ -111,7 +150,7 @@ status_col.markdown(
 )
 
 live_frame = st.session_state.css.get_live_frame() if st.session_state.css is not None else None
-if live_frame is not None:
+if live_frame is not None and live_frame.size > 0:
     st.session_state.live_img = live_frame
 
 left_col, right_col = st.columns(2)
@@ -129,10 +168,17 @@ with right_col:
     else:
         st.info("No detected card yet")
 
+if st.session_state.pending_action == "get_next_card":
+    with st.spinner("Waiting for the next card..."):
+        st.session_state.css.robot.arduino.get_next_card()
+    st.session_state.pending_action = None
+    st.session_state.last_entry = None
+    st.rerun()
+
 if st.session_state.running:
     img_new = st.session_state.css.sort_loop()
     st.session_state.last_img = img_new
-
-if True:
-    time.sleep(0.03)
+    st.rerun()
+elif auto_refresh:
+    time.sleep(0.1)
     st.rerun()

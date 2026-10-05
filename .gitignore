@@ -3,3 +3,5 @@
 *.png
 *.csv
 **/__pycache__/
+web_server/frontend/node_modules
+web_server/frontend/build

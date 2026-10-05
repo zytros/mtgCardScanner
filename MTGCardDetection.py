@@ -163,14 +163,17 @@ def getPrediction(img, card_names, card_prices, card_title_pos_1=(20, 70, 34, 40
     
     str_1 = pytesseract.image_to_string(card_title_1)
     str_2 = pytesseract.image_to_string(card_title_2)
-    card_name_1 = re.sub('[^a-zA-Z0-9,+ ]', '', str_1)
-    card_name_2 = re.sub('[^a-zA-Z0-9,+ ]', '', str_2)
+    card_name_1 = re.sub('[^a-zA-Z0-9,+ ]', '', str_1).strip()
+    card_name_2 = re.sub('[^a-zA-Z0-9,+ ]', '', str_2).strip()
     print(f"raw reading 1: {card_name_1}")
     print(f"raw reading 2: {card_name_2}")
     
-    closest_match_1 = difflib.get_close_matches(card_name_1, card_names, n=1)
-    closest_match_2 = difflib.get_close_matches(card_name_2, card_names, n=1)
+    closest_match_1 = difflib.get_close_matches(card_name_1, card_names, n=1, cutoff=0.4)
+    closest_match_2 = difflib.get_close_matches(card_name_2, card_names, n=1, cutoff=0.4)
 
+    print(closest_match_1)
+    print(closest_match_2)
+    
     # Initialize variables for the best match tracking
     closest_match = "Not Found in Chosen Set"
     best_score = 0.0
