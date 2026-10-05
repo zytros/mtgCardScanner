@@ -65,14 +65,20 @@ class Arduino:
         if self.port is None:
             raise ConnectionError("No Arduino serial port detected. Connect the board and set the port explicitly.")
 
-        self._serial = serial.Serial(self.port, self.baud, timeout=1)
-        self._serial.reset_input_buffer()
-        self._serial.reset_output_buffer()
-        print(f"Connected to Arduino on port {self.port} on baud {self.baud}")
+        try:
+            self._serial = serial.Serial(self.port, self.baud, timeout=1)
+            self._serial.reset_input_buffer()
+            self._serial.reset_output_buffer()
+            print(f"Connected to Arduino on port {self.port} on baud {self.baud}")
+        except Exception as e:
+            print(f"Warning: Could not connect to Arduino on {self.port}: {e}")
+            self._serial = None
 
     def _send_command(self, command, expected_reply, timeout=15.0):
         if self._serial is None or not self._serial.is_open:
             self._connect()
+            if self._serial is None or not self._serial.is_open:
+                raise ConnectionError("Arduino serial port is not open.")
 
         print(f"sending command {command}")
         self._serial.reset_input_buffer()
@@ -84,7 +90,9 @@ class Arduino:
             if self._serial.in_waiting > 0:
                 line = self._serial.readline().decode("utf-8", errors="ignore").strip()
                 if line:
-                    if expected_reply is None or line == expected_reply:
+                    if expected_reply is None:
+                        return line
+                    if line == expected_reply:
                         return line
             time.sleep(0.01)
 
@@ -104,6 +112,86 @@ class Arduino:
             return bin
         except Exception as exc:
             print(f"could not move card to bin: {exc}")
+            return -1
+
+    def open_sides(self):
+        try:
+            self._send_command("open_sides", "OPEN_SIDES_DONE", timeout=5.0)
+            return 0
+        except Exception as exc:
+            print(f"could not open sides: {exc}")
+            return -1
+
+    def close_sides(self):
+        try:
+            self._send_command("close_sides", "CLOSE_SIDES_DONE", timeout=5.0)
+            return 0
+        except Exception as exc:
+            print(f"could not close sides: {exc}")
+            return -1
+
+    def open_bottom(self):
+        try:
+            self._send_command("open_bottom", "OPEN_BOTTOM_DONE", timeout=5.0)
+            return 0
+        except Exception as exc:
+            print(f"could not open bottom: {exc}")
+            return -1
+
+    def close_bottom(self):
+        try:
+            self._send_command("close_bottom", "CLOSE_BOTTOM_DONE", timeout=5.0)
+            return 0
+        except Exception as exc:
+            print(f"could not close bottom: {exc}")
+            return -1
+
+    def push_left(self):
+        try:
+            self._send_command("push_left", "PUSH_LEFT_DONE", timeout=5.0)
+            return 0
+        except Exception as exc:
+            print(f"could not push left: {exc}")
+            return -1
+
+    def push_right(self):
+        try:
+            self._send_command("push_right", "PUSH_RIGHT_DONE", timeout=5.0)
+            return 0
+        except Exception as exc:
+            print(f"could not push right: {exc}")
+            return -1
+
+    def reset_pushers(self):
+        try:
+            self._send_command("reset_pushers", "RESET_PUSHERS_DONE", timeout=5.0)
+            return 0
+        except Exception as exc:
+            print(f"could not reset pushers: {exc}")
+            return -1
+
+    def neutral_inc(self):
+        try:
+            reply = self._send_command("neutral_inc", None, timeout=5.0)
+            return int(reply) if reply and reply.isdigit() else 90
+        except Exception as exc:
+            print(f"could not increment neutral: {exc}")
+            return -1
+
+    def neutral_dec(self):
+        try:
+            reply = self._send_command("neutral_dec", None, timeout=5.0)
+            return int(reply) if reply and reply.isdigit() else 90
+        except Exception as exc:
+            print(f"could not decrement neutral: {exc}")
+            return -1
+
+    def get_light(self):
+        try:
+            reply = self._send_command("get_light", None, timeout=5.0)
+            return int(reply) if reply and reply.isdigit() else 0
+        except Exception as exc:
+            print(f"could not get light level: {exc}")
             return -1
 
     def __del__(self):

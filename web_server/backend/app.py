@@ -128,6 +128,72 @@ def get_next_card():
         manager.last_entry = None
     return jsonify({"success": True})
 
+@app.route("/api/robot/get_card", methods=["POST"])
+def robot_get_card():
+    with manager.lock:
+        res = manager.robot.arduino.get_next_card()
+    return jsonify({"success": res != -1})
+
+@app.route("/api/robot/open_sides", methods=["POST"])
+def robot_open_sides():
+    with manager.lock:
+        res = manager.robot.arduino.open_sides()
+    return jsonify({"success": res != -1})
+
+@app.route("/api/robot/close_sides", methods=["POST"])
+def robot_close_sides():
+    with manager.lock:
+        res = manager.robot.arduino.close_sides()
+    return jsonify({"success": res != -1})
+
+@app.route("/api/robot/open_bottom", methods=["POST"])
+def robot_open_bottom():
+    with manager.lock:
+        res = manager.robot.arduino.open_bottom()
+    return jsonify({"success": res != -1})
+
+@app.route("/api/robot/close_bottom", methods=["POST"])
+def robot_close_bottom():
+    with manager.lock:
+        res = manager.robot.arduino.close_bottom()
+    return jsonify({"success": res != -1})
+
+@app.route("/api/robot/push_left", methods=["POST"])
+def robot_push_left():
+    with manager.lock:
+        res = manager.robot.arduino.push_left()
+    return jsonify({"success": res != -1})
+
+@app.route("/api/robot/push_right", methods=["POST"])
+def robot_push_right():
+    with manager.lock:
+        res = manager.robot.arduino.push_right()
+    return jsonify({"success": res != -1})
+
+@app.route("/api/robot/reset_pushers", methods=["POST"])
+def robot_reset_pushers():
+    with manager.lock:
+        res = manager.robot.arduino.reset_pushers()
+    return jsonify({"success": res != -1})
+
+@app.route("/api/robot/neutral_inc", methods=["POST"])
+def robot_neutral_inc():
+    with manager.lock:
+        neutral_val = manager.robot.arduino.neutral_inc()
+    return jsonify({"success": neutral_val != -1, "neutral": neutral_val})
+
+@app.route("/api/robot/neutral_dec", methods=["POST"])
+def robot_neutral_dec():
+    with manager.lock:
+        neutral_val = manager.robot.arduino.neutral_dec()
+    return jsonify({"success": neutral_val != -1, "neutral": neutral_val})
+
+@app.route("/api/robot/light", methods=["GET"])
+def robot_get_light():
+    with manager.lock:
+        light_val = manager.robot.arduino.get_light()
+    return jsonify({"success": light_val != -1, "light": light_val})
+
 @app.route("/api/save", methods=["POST"])
 def save_csv():
     with manager.lock:

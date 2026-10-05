@@ -21,6 +21,8 @@ const int lightDropThreshold = 30;
 const unsigned long stopDelayMs = 1000;
 const unsigned long maxRunTimeMs = 5000;
 
+int pusherNeutral = 90;
+
 void setup() {
   Serial.begin(9600);
 
@@ -30,7 +32,7 @@ void setup() {
   sortServoBottom.attach(sortServoBottomPin);
 
   sortServoSide.write(120);
-  sortServoPusher.write(90);
+  sortServoPusher.write(pusherNeutral);
   sortServoBottom.write(100);
   
   delay(500); // Allow time to reach default positions
@@ -49,6 +51,26 @@ void loop() {
 
     if (command == "get_card") {
       getCard();
+    } else if (command == "open_sides") {
+      openSides();
+    } else if (command == "close_sides") {
+      closeSides();
+    } else if (command == "open_bottom") {
+      openBottom();
+    } else if (command == "close_bottom") {
+      closeBottom();
+    } else if (command == "push_left") {
+      pushLeft();
+    } else if (command == "push_right") {
+      pushRight();
+    } else if (command == "reset_pushers") {
+      resetPushers();
+    } else if (command == "neutral_inc") {
+      neutralInc();
+    } else if (command == "neutral_dec") {
+      neutralDec();
+    } else if (command == "get_light") {
+      getLight();
     } else if (command.startsWith("move_bin")) {
       int binNumber = 0;
       String binValue = command.substring(8);
@@ -102,6 +124,85 @@ void getCard() {
   Serial.println("GET_CARD_DONE");
 }
 
+void openSides() {
+  sortServoSide.attach(sortServoSidePin);
+  sortServoSide.write(0);
+  delay(200);
+  // Stay open (keep attached to hold position)
+  Serial.println("OPEN_SIDES_DONE");
+}
+
+void closeSides() {
+  sortServoSide.attach(sortServoSidePin);
+  sortServoSide.write(120);
+  delay(200);
+  sortServoSide.detach();
+  Serial.println("CLOSE_SIDES_DONE");
+}
+
+void openBottom() {
+  sortServoBottom.attach(sortServoBottomPin);
+  sortServoBottom.write(0);
+  delay(700);
+  // Stay open (keep attached to hold position)
+  Serial.println("OPEN_BOTTOM_DONE");
+}
+
+void closeBottom() {
+  sortServoBottom.attach(sortServoBottomPin);
+  sortServoBottom.write(100);
+  delay(500);
+  sortServoBottom.detach();
+  Serial.println("CLOSE_BOTTOM_DONE");
+}
+
+void pushLeft() {
+  sortServoPusher.attach(sortServoPusherPin);
+  sortServoPusher.write(60);
+  delay(500);
+  // Stay in pushed position (keep attached)
+  Serial.println("PUSH_LEFT_DONE");
+}
+
+void pushRight() {
+  sortServoPusher.attach(sortServoPusherPin);
+  sortServoPusher.write(120);
+  delay(500);
+  // Stay in pushed position (keep attached)
+  Serial.println("PUSH_RIGHT_DONE");
+}
+
+void resetPushers() {
+  sortServoPusher.attach(sortServoPusherPin);
+  sortServoPusher.write(pusherNeutral);
+  delay(200);
+  sortServoPusher.detach();
+  Serial.println("RESET_PUSHERS_DONE");
+}
+
+void neutralInc() {
+  pusherNeutral++;
+  sortServoPusher.attach(sortServoPusherPin);
+  sortServoPusher.write(pusherNeutral);
+  delay(200);
+  sortServoPusher.detach();
+  Serial.println(pusherNeutral);
+}
+
+void neutralDec() {
+  pusherNeutral--;
+  sortServoPusher.attach(sortServoPusherPin);
+  sortServoPusher.write(pusherNeutral);
+  delay(200);
+  sortServoPusher.detach();
+  Serial.println(pusherNeutral);
+}
+
+void getLight() {
+  int lightVal = analogRead(lightSensorPin);
+  Serial.println(lightVal);
+}
+
 void moveToBin(int binNumber) {
   if (binNumber == 0) {
     moveLeft();
@@ -127,7 +228,7 @@ void moveLeft() {
   sortServoPusher.attach(sortServoPusherPin);
   sortServoPusher.write(60);
   delay(500);
-  sortServoPusher.write(90);
+  sortServoPusher.write(pusherNeutral);
   delay(200);
   sortServoPusher.detach();
 
@@ -151,7 +252,7 @@ void moveRight() {
   sortServoPusher.attach(sortServoPusherPin);
   sortServoPusher.write(120);
   delay(500);
-  sortServoPusher.write(90);
+  sortServoPusher.write(pusherNeutral);
   delay(200);
   sortServoPusher.detach();
 
